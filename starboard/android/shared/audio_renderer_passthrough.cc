@@ -598,13 +598,13 @@ void AudioRendererPassthrough::OnDecoderOutput() {
   // using a lock.
   if (frames_per_input_buffer_ == 0) {
     frames_per_input_buffer_ = ParseAc3SyncframeAudioSampleCount(
-        decoded_audio->data(), decoded_audio->size_in_bytes());
+        decoded_audio->buffer(), decoded_audio->size());
     SB_LOG(INFO) << "Got frames per input buffer " << frames_per_input_buffer_;
   }
 
   SB_DCHECK(frames_per_input_buffer_ ==
-            ParseAc3SyncframeAudioSampleCount(decoded_audio->data(),
-                                              decoded_audio->size_in_bytes()));
+            ParseAc3SyncframeAudioSampleCount(decoded_audio->buffer(),
+                                              decoded_audio->size()));
 
   ScopedLock scoped_lock(mutex_);
   decoded_audios_.push(decoded_audio);
