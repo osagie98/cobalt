@@ -119,7 +119,8 @@ PlatformThreadId PlatformThread::CurrentId() {
 #elif BUILDFLAG(IS_POSIX) && BUILDFLAG(IS_AIX)
   return pthread_self();
 #elif BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_AIX)
-  return reinterpret_cast<int64_t>(pthread_self());
+  // return reinterpret_cast<int64_t>(pthread_self());
+  return pthread_self();
 #endif
 }
 

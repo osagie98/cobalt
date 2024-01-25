@@ -135,6 +135,8 @@
 #define OS_POSIX 1
 #endif
 
+#define OS_POSIX 1
+
 // OS build flags
 #if defined(OS_AIX)
 #define BUILDFLAG_INTERNAL_IS_AIX() (1)
@@ -199,7 +201,7 @@
 #if defined(OS_LINUX)
 #define BUILDFLAG_INTERNAL_IS_LINUX() (1)
 #else
-#define BUILDFLAG_INTERNAL_IS_LINUX() (0)
+#define BUILDFLAG_INTERNAL_IS_LINUX() (1)
 #endif
 
 #if defined(OS_MAC)
@@ -270,7 +272,33 @@
 //   http://msdn.microsoft.com/en-us/library/b0084kay.aspx
 //   http://www.agner.org/optimize/calling_conventions.pdf
 //   or with gcc, run: "echo | gcc -E -dM -"
-#if defined(_M_X64) || defined(__x86_64__)
+#if defined(STARBOARD)
+#include "starboard/configuration.h"
+#if SB_IS(32_BIT)
+#define ARCH_CPU_32_BITS 1
+#elif SB_IS(64_BIT)
+#define ARCH_CPU_64_BITS 1
+#endif  // SB_IS(32_BIT)
+#if SB_IS(BIG_ENDIAN)
+#define ARCH_CPU_BIG_ENDIAN 1
+#else   // SB_IS(BIG_ENDIAN)
+#define ARCH_CPU_LITTLE_ENDIAN 1
+#endif  // SB_IS(BIG_ENDIAN)
+#if SB_IS(ARCH_X86)
+#define ARCH_CPU_X86_FAMILY 1
+#define ARCH_CPU_X86 1
+#elif SB_IS(ARCH_X64)
+#define ARCH_CPU_X86_FAMILY 1
+#define ARCH_CPU_X86_64 1
+#elif SB_IS(ARCH_ARM) || SB_IS(ARCH_ARM64)
+#define ARCH_CPU_ARM_FAMILY 1
+#if SB_IS(BIG_ENDIAN)
+#define ARCH_CPU_ARM 1
+#else   // SB_IS(BIG_ENDIAN)
+#define ARCH_CPU_ARMEL 1
+#endif  // SB_IS(BIG_ENDIAN)
+#endif
+#elif defined(_M_X64) || defined(__x86_64__)
 #define ARCH_CPU_X86_FAMILY 1
 #define ARCH_CPU_X86_64 1
 #define ARCH_CPU_64_BITS 1
@@ -357,7 +385,13 @@
 #endif
 
 // Type detection for wchar_t.
-#if defined(OS_WIN)
+#if defined(STARBOARD)
+#if SB_IS(WCHAR_T_UTF16)
+#define WCHAR_T_IS_UTF16
+#elif SB_IS(WCHAR_T_UTF32)
+#define WCHAR_T_IS_UTF32
+#endif
+#elif defined(OS_WIN)
 #define WCHAR_T_IS_UTF16
 #elif defined(OS_FUCHSIA)
 #define WCHAR_T_IS_UTF32
