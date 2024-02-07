@@ -14,7 +14,8 @@
 
 if (true) {
   group("default") {
-    deps = [ "//net" ]
+    deps = [ "//net",
+             "//media", ]
   }
 } else {
   group("gn_all") {
