@@ -5,6 +5,7 @@
 #include "base/time/time.h"
 
 #include <stdint.h>
+
 #include <time.h>
 
 #include <limits>
@@ -283,6 +284,7 @@ TEST_F(TimeTest, UTCTimeT) {
   EXPECT_EQ(now_t_1, now_t_2);
 }
 
+#if !defined(STARBOARD)
 // Test conversions to/from time_t and exploding/unexploding (local time).
 TEST_F(TimeTest, LocalTimeT) {
   // C library time and exploded time.
@@ -322,6 +324,7 @@ TEST_F(TimeTest, LocalTimeT) {
   time_t now_t_2 = our_time_2.ToTimeT();
   EXPECT_EQ(now_t_1, now_t_2);
 }
+#endif
 
 // Test conversions to/from javascript time.
 TEST_F(TimeTest, JsTime) {
@@ -340,6 +343,7 @@ TEST_F(TimeTest, JsTime) {
   EXPECT_EQ(kWindowsEpoch, time.ToJsTimeIgnoringNull());
 }
 
+#if !defined(STARBOARD)
 #if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
 TEST_F(TimeTest, FromTimeVal) {
   Time now = Time::Now();
@@ -347,6 +351,7 @@ TEST_F(TimeTest, FromTimeVal) {
   EXPECT_EQ(now, also_now);
 }
 #endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+#endif
 
 TEST_F(TimeTest, FromExplodedWithMilliseconds) {
   // Some platform implementations of FromExploded are liable to drop
@@ -878,6 +883,7 @@ TEST_F(TimeTest, MaxConversions) {
   EXPECT_TRUE(t.is_max());
   EXPECT_EQ(std::numeric_limits<time_t>::max(), t.ToTimeT());
 
+#if !defined(STARBOARD)
 #if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
   struct timeval tval;
   tval.tv_sec = std::numeric_limits<time_t>::max();
@@ -888,6 +894,7 @@ TEST_F(TimeTest, MaxConversions) {
   EXPECT_EQ(std::numeric_limits<time_t>::max(), tval.tv_sec);
   EXPECT_EQ(static_cast<suseconds_t>(Time::kMicrosecondsPerSecond) - 1,
       tval.tv_usec);
+#endif
 #endif
 
 #if BUILDFLAG(IS_APPLE)
@@ -994,9 +1001,10 @@ TEST_F(TimeTest, Explode_Y10KCompliance) {
     Time time;
     Time::Exploded expected;
   } kTestCases[] = {
+#if !defined(STARBOARD)
       // A very long time ago.
       {Time::Min(), Time::Exploded{-290677, 12, 4, 23, 19, 59, 5, 224}},
-
+#endif
       // Before/On/After 1 Jan 1601.
       {make_time(-kHalfYearInMicros),
        Time::Exploded{1600, 7, 1, 3, 0, 0, 0, 0}},
@@ -1042,9 +1050,10 @@ TEST_F(TimeTest, Explode_Y10KCompliance) {
        Time::Exploded{287396, 10, 3, 12, 8, 59, 0, 992}},
       {make_time(kIcuMaxMicrosOffset + kHalfYearInMicros),
        Time::Exploded{287397, 4, 3, 12, 8, 59, 0, 992}},
-
+#if !defined(STARBOARD)
       // A very long time from now.
       {Time::Max(), Time::Exploded{293878, 1, 4, 10, 4, 0, 54, 775}},
+#endif
   };
 
   for (const TestCase& test_case : kTestCases) {
@@ -1679,6 +1688,7 @@ TEST(TimeDelta, InXXXOverflow) {
       "");
 }
 
+#if !defined(STARBOARD)
 #if BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
 TEST(TimeDelta, TimeSpecConversion) {
   TimeDelta delta = Seconds(0);
@@ -1706,6 +1716,7 @@ TEST(TimeDelta, TimeSpecConversion) {
   EXPECT_EQ(delta, TimeDelta::FromTimeSpec(result));
 }
 #endif  // BUILDFLAG(IS_POSIX) || BUILDFLAG(IS_FUCHSIA)
+#endif
 
 // Our internal time format is serialized in things like databases, so it's
 // important that it's consistent across all our platforms.  We use the 1601

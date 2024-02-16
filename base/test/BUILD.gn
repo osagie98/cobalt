@@ -170,6 +170,17 @@ static_library("test_support") {
     "//third_party/libxml:xml_reader",
   ]
 
+  if (is_starboard) {
+    sources += [
+      "time_helpers.cc",
+      "time_helpers.h",
+    ]
+    sources -= [
+      "metrics/histogram_enum_reader.cc",
+      "metrics/histogram_enum_reader.h",
+    ]
+  }
+
   if (enable_base_tracing) {
     public_deps += [ "//third_party/perfetto:perfetto_test_support" ]
     if (!is_chromeos) {
