@@ -207,14 +207,14 @@ component("media") {
     # "formats/webm/webm_video_client.h",
     # "formats/webm/webm_webvtt_parser.cc",
     # "formats/webm/webm_webvtt_parser.h",
-    # "video/h264_bit_reader.cc",
-    # "video/h264_bit_reader.h",
-    # "video/h264_parser.cc",
-    # "video/h264_parser.h",
-    # "video/h265_nalu_parser.cc",
-    # "video/h265_nalu_parser.h",
-    # "video/h265_parser.cc",
-    # "video/h265_parser.h",
+    "video/h264_bit_reader.cc",
+    "video/h264_bit_reader.h",
+    "video/h264_parser.cc",
+    "video/h264_parser.h",
+    "video/h265_nalu_parser.cc",
+    "video/h265_nalu_parser.h",
+    "video/h265_parser.cc",
+    "video/h265_parser.h",
   ]
 
   sources += [
