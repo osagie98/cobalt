@@ -14,9 +14,17 @@
 
 if (true) {
   group("default") {
-    deps = [ "//net",
-             "//media", ]
+    deps = [
+      "//base",
+      "//media",
+      "//net",
+    ]
   }
+  # group("web_media_player_sandbox") {
+  #   deps = [
+  #     "//cobalt/media/sandbox:web_media_player_sandbox",
+  #   ]
+  # }
 } else {
   group("gn_all") {
     testonly = true

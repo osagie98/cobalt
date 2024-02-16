@@ -13,7 +13,9 @@
 #include "base/functional/callback_helpers.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/task/bind_post_task.h"
+#ifndef STARBOARD
 #include "base/trace_event/trace_event.h"
+#endif
 #include "media/base/audio_decoder_config.h"
 #include "media/base/demuxer.h"
 #include "media/base/media_tracks.h"
@@ -314,7 +316,9 @@ void ChunkDemuxerStream::Read(uint32_t count, ReadCB read_cb) {
   CompletePendingReadIfPossible_Locked();
 }
 
-DemuxerStream::Type ChunkDemuxerStream::type() const { return type_; }
+DemuxerStream::Type ChunkDemuxerStream::type() const {
+  return type_;
+}
 
 StreamLiveness ChunkDemuxerStream::liveness() const {
   base::AutoLock auto_lock(lock_);
@@ -337,7 +341,9 @@ VideoDecoderConfig ChunkDemuxerStream::video_decoder_config() {
   return stream_->GetCurrentVideoDecoderConfig();
 }
 
-bool ChunkDemuxerStream::SupportsConfigChanges() { return true; }
+bool ChunkDemuxerStream::SupportsConfigChanges() {
+  return true;
+}
 
 bool ChunkDemuxerStream::IsEnabled() const {
   base::AutoLock auto_lock(lock_);
@@ -379,8 +385,7 @@ void ChunkDemuxerStream::SetLiveness(StreamLiveness liveness) {
 void ChunkDemuxerStream::ChangeState_Locked(State state) {
   lock_.AssertAcquired();
   DVLOG(1) << "ChunkDemuxerStream::ChangeState_Locked() : "
-           << "type " << type_
-           << " - " << state_ << " -> " << state;
+           << "type " << type_ << " - " << state_ << " -> " << state;
   state_ = state;
 }
 
@@ -515,7 +520,9 @@ DemuxerType ChunkDemuxer::GetDemuxerType() const {
 void ChunkDemuxer::Initialize(DemuxerHost* host,
                               PipelineStatusCallback init_cb) {
   DVLOG(1) << "Initialize()";
+#ifndef STARBOARD
   TRACE_EVENT_ASYNC_BEGIN0("media", "ChunkDemuxer::Initialize", this);
+#endif
 
   base::OnceClosure open_cb;
 
@@ -552,7 +559,9 @@ void ChunkDemuxer::Stop() {
 void ChunkDemuxer::Seek(base::TimeDelta time, PipelineStatusCallback cb) {
   DVLOG(1) << "Seek(" << time.InSecondsF() << ")";
   DCHECK(time >= base::TimeDelta());
+#ifndef STARBOARD
   TRACE_EVENT_ASYNC_BEGIN0("media", "ChunkDemuxer::Seek", this);
+#endif
 
   base::AutoLock auto_lock(lock_);
   DCHECK(!seek_cb_);
@@ -650,7 +659,8 @@ void ChunkDemuxer::StartWaitingForSeek(base::TimeDelta seek_time) {
   DVLOG(1) << "StartWaitingForSeek()";
   base::AutoLock auto_lock(lock_);
   DCHECK(state_ == INITIALIZED || state_ == ENDED || state_ == SHUTDOWN ||
-         state_ == PARSE_ERROR) << state_;
+         state_ == PARSE_ERROR)
+      << state_;
   DCHECK(!seek_cb_);
 
   if (state_ == SHUTDOWN || state_ == PARSE_ERROR)
@@ -1167,8 +1177,7 @@ void ChunkDemuxer::ResetParserState(const std::string& id,
   CHECK(IsValidId_Locked(id));
   bool old_waiting_for_data = IsSeekWaitingForData_Locked();
   source_state_map_[id]->ResetParserState(append_window_start,
-                                          append_window_end,
-                                          timestamp_offset);
+                                          append_window_end, timestamp_offset);
   // ResetParserState can possibly emit some buffers.
   // Need to check whether seeking can be completed.
   if (old_waiting_for_data && !IsSeekWaitingForData_Locked() && seek_cb_)
@@ -1178,18 +1187,18 @@ void ChunkDemuxer::ResetParserState(const std::string& id,
 void ChunkDemuxer::Remove(const std::string& id,
                           base::TimeDelta start,
                           base::TimeDelta end) {
-  DVLOG(1) << "Remove(" << id << ", " << start.InSecondsF()
-           << ", " << end.InSecondsF() << ")";
+  DVLOG(1) << "Remove(" << id << ", " << start.InSecondsF() << ", "
+           << end.InSecondsF() << ")";
   base::AutoLock auto_lock(lock_);
 
   DCHECK(!id.empty());
   CHECK(IsValidId_Locked(id));
   DCHECK(start >= base::TimeDelta()) << start.InSecondsF();
-  DCHECK(start < end) << "start " << start.InSecondsF()
-                      << " end " << end.InSecondsF();
+  DCHECK(start < end) << "start " << start.InSecondsF() << " end "
+                      << end.InSecondsF();
   DCHECK(duration_ != kNoTimestamp);
-  DCHECK(start <= duration_) << "start " << start.InSecondsF()
-                             << " duration " << duration_.InSecondsF();
+  DCHECK(start <= duration_) << "start " << start.InSecondsF() << " duration "
+                             << duration_.InSecondsF();
 
   if (start == duration_)
     return;
@@ -1323,8 +1332,7 @@ bool ChunkDemuxer::GetGenerateTimestampsFlag(const std::string& id) {
   return source_state_map_[id]->generate_timestamps_flag();
 }
 
-void ChunkDemuxer::SetSequenceMode(const std::string& id,
-                                   bool sequence_mode) {
+void ChunkDemuxer::SetSequenceMode(const std::string& id, bool sequence_mode) {
   base::AutoLock auto_lock(lock_);
   DVLOG(1) << "SetSequenceMode(" << id << ", " << sequence_mode << ")";
   CHECK(IsValidId_Locked(id));
@@ -1345,7 +1353,6 @@ void ChunkDemuxer::SetGroupStartTimestampIfInSequenceMode(
   source_state_map_[id]->SetGroupStartTimestampIfInSequenceMode(
       timestamp_offset);
 }
-
 
 void ChunkDemuxer::MarkEndOfStream(PipelineStatus status) {
   DVLOG(1) << "MarkEndOfStream(" << status << ")";
@@ -1433,8 +1440,8 @@ void ChunkDemuxer::SetMemoryLimitsForTest(DemuxerStream::Type type,
 
 void ChunkDemuxer::ChangeState_Locked(State new_state) {
   lock_.AssertAcquired();
-  DVLOG(1) << "ChunkDemuxer::ChangeState_Locked() : "
-           << state_ << " -> " << new_state;
+  DVLOG(1) << "ChunkDemuxer::ChangeState_Locked() : " << state_ << " -> "
+           << new_state;
 
   // TODO(wolenetz): Change to DCHECK once less verification in release build is
   // needed. See https://crbug.com/786975.
@@ -1628,8 +1635,8 @@ void ChunkDemuxer::DecreaseDurationIfNecessary() {
 
   for (auto itr = source_state_map_.begin(); itr != source_state_map_.end();
        ++itr) {
-    max_duration = std::max(max_duration,
-                            itr->second->GetMaxBufferedDuration());
+    max_duration =
+        std::max(max_duration, itr->second->GetMaxBufferedDuration());
   }
 
   if (max_duration.is_zero())
@@ -1701,16 +1708,20 @@ void ChunkDemuxer::ShutdownAllStreams() {
 void ChunkDemuxer::RunInitCB_Locked(PipelineStatus status) {
   lock_.AssertAcquired();
   DCHECK(init_cb_);
+#ifndef STARBOARD
   TRACE_EVENT_ASYNC_END1("media", "ChunkDemuxer::Initialize", this, "status",
                          PipelineStatusToString(status));
+#endif
   std::move(init_cb_).Run(status);
 }
 
 void ChunkDemuxer::RunSeekCB_Locked(PipelineStatus status) {
   lock_.AssertAcquired();
   DCHECK(seek_cb_);
+#ifndef STARBOARD
   TRACE_EVENT_ASYNC_END1("media", "ChunkDemuxer::Seek", this, "status",
                          PipelineStatusToString(status));
+#endif
   std::move(seek_cb_).Run(status);
 }
 
