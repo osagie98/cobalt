@@ -4,7 +4,9 @@
 
 #include "media/base/media_util.h"
 
+#ifndef STARBOARD
 #include "base/trace_event/trace_event.h"
+#endif
 
 namespace media {
 
@@ -32,7 +34,9 @@ AudioParameters::Format ConvertAudioCodecToBitstreamFormat(AudioCodec codec) {
 
 bool MediaTraceIsEnabled() {
   bool enable_decode_traces = false;
+#ifndef STARBOARD
   TRACE_EVENT_CATEGORY_GROUP_ENABLED("media", &enable_decode_traces);
+#endif
   return enable_decode_traces;
 }
 }  // namespace media

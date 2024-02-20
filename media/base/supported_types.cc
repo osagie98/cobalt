@@ -15,15 +15,19 @@
 #include "media/base/media_client.h"
 #include "media/base/media_switches.h"
 #include "media/media_buildflags.h"
+#if !defined(STARBOARD)
 #include "ui/display/display_switches.h"
+#endif  // !defined(STARBOARD)
 #include "ui/gfx/hdr_metadata.h"
 
+#if !defined(STARBOARD)
 #if BUILDFLAG(ENABLE_LIBVPX)
 // TODO(dalecurtis): This technically should not be allowed in media/base. See
 // TODO below about moving outside of base.
 #include "third_party/libvpx/source/libvpx/vpx/vp8dx.h"      // nogncheck
 #include "third_party/libvpx/source/libvpx/vpx/vpx_codec.h"  // nogncheck
 #endif
+#endif  // !defined(STARBOARD)
 
 #if BUILDFLAG(IS_ANDROID)
 #include "base/android/build_info.h"
@@ -239,6 +243,14 @@ bool IsHevcProfileSupported(const VideoType& type) {
 }
 
 bool IsVp9ProfileSupported(const VideoType& type) {
+#if defined(STARBOARD)
+  // Assume all profiles are supported, and let the Starboard implementation to
+  // filter it out.
+  return type.profile == VP9PROFILE_PROFILE0 ||
+         type.profile == VP9PROFILE_PROFILE1 ||
+         type.profile == VP9PROFILE_PROFILE2 ||
+         type.profile == VP9PROFILE_PROFILE3;
+#else  // defined(STARBOARD)
 #if BUILDFLAG(ENABLE_LIBVPX)
   // High bit depth capabilities may be toggled via LibVPX config flags.
   static const bool vpx_supports_hbd = (vpx_codec_get_caps(vpx_codec_vp9_dx()) &
@@ -269,6 +281,7 @@ bool IsVp9ProfileSupported(const VideoType& type) {
       NOTREACHED();
   }
 #endif  // BUILDFLAG(ENABLE_LIBVPX)
+#endif  // defined(STARBOARD)
   return false;
 }
 
