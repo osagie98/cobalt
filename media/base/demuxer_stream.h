@@ -68,6 +68,10 @@ class MEDIA_EXPORT DemuxerStream {
 
   static const char* GetStatusName(Status status);
 
+#if defined(STARBOARD)
+  virtual std::string mime_type() const { return ""; }
+#endif  // defined (STARBOARD)
+
   using DecoderBufferVector = std::vector<scoped_refptr<DecoderBuffer>>;
   using ReadCB = base::OnceCallback<void(Status, DecoderBufferVector)>;
 

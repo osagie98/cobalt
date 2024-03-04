@@ -18,18 +18,24 @@
 #include <string>
 
 #include "starboard/common/mutex.h"
-#include "third_party/chromium/media/base/audio_codecs.h"
-#include "third_party/chromium/media/base/container_names.h"
-#include "third_party/chromium/media/base/pipeline_status.h"
-#include "third_party/chromium/media/base/timestamp_constants.h"
-#include "third_party/chromium/media/base/video_codecs.h"
+// #include "third_party/chromium/media/base/audio_codecs.h"
+// #include "third_party/chromium/media/base/container_names.h"
+// #include "third_party/chromium/media/base/pipeline_status.h"
+// #include "third_party/chromium/media/base/timestamp_constants.h"
+// #include "third_party/chromium/media/base/video_codecs.h"
+#include "media/base/audio_codecs.h"
+#include "media/base/container_names.h"
+#include "media/base/pipeline_status.h"
+#include "media/base/timestamp_constants.h"
+#include "media/base/video_codecs.h"
+
 
 namespace cobalt {
 namespace media {
 
 using AudioCodec = ::media::AudioCodec;
 using VideoCodec = ::media::VideoCodec;
-using PipelineStatus = ::media::PipelineStatus;
+using PipelineStatus = ::media::PipelineStatusCodes;
 using VideoDecoderType = ::media::VideoDecoderType;
 
 class MediaMetricsProvider {
@@ -50,7 +56,7 @@ class MediaMetricsProvider {
     ::media::AudioCodec audio_codec;
     ::media::VideoCodec video_codec;
     ::media::PipelineStatus last_pipeline_status =
-        ::media::PipelineStatus::PIPELINE_OK;
+        ::media::PipelineStatusCodes::PIPELINE_OK;
   };
 
   struct MediaInfo {
@@ -62,7 +68,7 @@ class MediaMetricsProvider {
  public:
   // based on mojom::MediaMetricsProvider
   void Initialize(bool is_mse);
-  void OnError(const ::media::PipelineStatus status);
+  void OnError(const ::media::PipelineStatusCodes status);
   void SetHasAudio(::media::AudioCodec audio_codec);
   void SetHasVideo(::media::VideoCodec video_codec);
   void SetHasPlayed();

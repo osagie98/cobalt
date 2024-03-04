@@ -24,6 +24,9 @@
 #include "media/base/decrypt_config.h"
 #include "media/base/media_export.h"
 #include "media/base/timestamp_constants.h"
+#if defined(STARBOARD)
+#include "starboard/media.h"
+#endif  // defined(STARBOARD)
 
 namespace media {
 
@@ -35,6 +38,35 @@ namespace media {
 class MEDIA_EXPORT DecoderBuffer
     : public base::RefCountedThreadSafe<DecoderBuffer> {
  public:
+#if defined(STARBOARD)
+  class Allocator {
+   public:
+    static Allocator* GetInstance();
+
+    // The function should never return nullptr.  It may terminate the app on
+    // allocation failure.
+    virtual void* Allocate(size_t size, size_t alignment) = 0;
+    virtual void Free(void* p, size_t size) = 0;
+
+    virtual int GetAudioBufferBudget() const = 0;
+    virtual int GetBufferAlignment() const = 0;
+    virtual int GetBufferPadding() const = 0;
+    virtual SbTime GetBufferGarbageCollectionDurationThreshold() const = 0;
+    virtual int GetProgressiveBufferBudget(SbMediaVideoCodec codec,
+                                           int resolution_width,
+                                           int resolution_height,
+                                           int bits_per_pixel) const = 0;
+    virtual int GetVideoBufferBudget(SbMediaVideoCodec codec,
+                                     int resolution_width,
+                                     int resolution_height,
+                                     int bits_per_pixel) const = 0;
+
+   protected:
+    ~Allocator() {}
+
+    static void Set(Allocator* allocator);
+  };
+#endif  // defined(STARBOARD)
   // ExternalMemory wraps a class owning a buffer and expose the data interface
   // through |span|. This class is derived by a class that owns the class owning
   // the buffer owner class. It is generally better to add the buffer class to
@@ -93,6 +125,7 @@ class MEDIA_EXPORT DecoderBuffer
                                                const uint8_t* side_data,
                                                size_t side_data_size);
 
+#if !defined(STARBOARD)
   // Create a DecoderBuffer where data() of |size| bytes resides within the heap
   // as byte array. The buffer's |is_key_frame_| will default to false.
   //
@@ -127,6 +160,7 @@ class MEDIA_EXPORT DecoderBuffer
   // |external_memory| is owned by DecoderBuffer until it is destroyed.
   static scoped_refptr<DecoderBuffer> FromExternalMemory(
       std::unique_ptr<ExternalMemory> external_memory);
+#endif  // !defined(STARBOARD)
 
   // Create a DecoderBuffer indicating we've reached end of stream.
   //
@@ -166,6 +200,9 @@ class MEDIA_EXPORT DecoderBuffer
 
   const uint8_t* data() const {
     DCHECK(!end_of_stream());
+#if defined(STARBOARD)
+    return data_;
+#else   // defined(STARBOARD)
     if (read_only_mapping_.IsValid())
       return read_only_mapping_.GetMemoryAs<const uint8_t>();
     if (writable_mapping_.IsValid())
@@ -173,15 +210,20 @@ class MEDIA_EXPORT DecoderBuffer
     if (external_memory_)
       return external_memory_->span().data();
     return data_.get();
+#endif  // defined(STARBOARD)
   }
 
   // TODO(sandersd): Remove writable_data(). https://crbug.com/834088
   uint8_t* writable_data() const {
     DCHECK(!end_of_stream());
+#if defined(STARBOARD)
+    return data_;
+#else   // defined(STARBOARD)
     DCHECK(!read_only_mapping_.IsValid());
     DCHECK(!writable_mapping_.IsValid());
     DCHECK(!external_memory_);
     return data_.get();
+#endif  // defined(STARBOARD)
   }
 
   size_t data_size() const {
@@ -222,10 +264,18 @@ class MEDIA_EXPORT DecoderBuffer
   }
 
   // If there's no data in this buffer, it represents end of stream.
+#if defined(STARBOARD)
+  bool end_of_stream() const { return !data_; }
+  void shrink_to(size_t size) {
+    DCHECK_LE(size, size_);
+    size_ = size;
+  }
+#else   // defined(STARBOARD)
   bool end_of_stream() const {
     return !read_only_mapping_.IsValid() && !writable_mapping_.IsValid() &&
            !external_memory_ && !data_;
   }
+#endif  // defined(STARBOARD)
 
   bool is_key_frame() const {
     DCHECK(!end_of_stream());
@@ -261,6 +311,7 @@ class MEDIA_EXPORT DecoderBuffer
                 const uint8_t* side_data,
                 size_t side_data_size);
 
+#if !defined(STARBOARD)
   DecoderBuffer(std::unique_ptr<uint8_t[]> data, size_t size);
 
   DecoderBuffer(base::ReadOnlySharedMemoryMapping mapping, size_t size);
@@ -269,10 +320,24 @@ class MEDIA_EXPORT DecoderBuffer
 
   explicit DecoderBuffer(std::unique_ptr<ExternalMemory> external_memory);
 
+  DecoderBuffer(std::unique_ptr<uint8_t[]> data, size_t size);
+
+  DecoderBuffer(std::unique_ptr<UnalignedSharedMemory> shm, size_t size);
+
+  DecoderBuffer(std::unique_ptr<ReadOnlyUnalignedMapping> shared_mem_mapping,
+                size_t size);
+#endif  // !defined(STARBOARD)
+
   virtual ~DecoderBuffer();
 
+#if defined(STARBOARD)
+  // Encoded data, allocated from DecoderBuffer::Allocator.
+  uint8_t* data_ = nullptr;
+  size_t allocated_size_ = 0;
+#else   // defined(STARBOARD)
   // Encoded data, if it is stored on the heap.
   std::unique_ptr<uint8_t[]> data_;
+#endif  // defined(STARBOARD)
 
  private:
   TimeInfo time_info_;
@@ -284,11 +349,13 @@ class MEDIA_EXPORT DecoderBuffer
   size_t side_data_size_ = 0;
   std::unique_ptr<uint8_t[]> side_data_;
 
+#if !defined(STARBOARD)
   // Encoded data, if it is stored in a read-only shared memory mapping.
   base::ReadOnlySharedMemoryMapping read_only_mapping_;
 
   // Encoded data, if it is stored in a writable shared memory mapping.
   base::WritableSharedMemoryMapping writable_mapping_;
+#endif  // !defined(STARBOARD)
 
   std::unique_ptr<ExternalMemory> external_memory_;
 

@@ -36,7 +36,7 @@ void MediaMetricsProvider::Initialize(bool is_mse) {
   media_info_.emplace(MediaInfo(is_mse));
 }
 
-void MediaMetricsProvider::OnError(const ::media::PipelineStatus status) {
+void MediaMetricsProvider::OnError(const ::media::PipelineStatusCodes status) {
   DCHECK(IsInitialized());
   ScopedLock scoped_lock(mutex_);
   uma_info_.last_pipeline_status = status;

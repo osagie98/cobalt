@@ -25,7 +25,9 @@
 #include "starboard/common/mutex.h"
 #include "starboard/media.h"
 #include "third_party/chromium/media/base/decoder_buffer.h"
-#include "third_party/chromium/media/base/video_decoder_config.h"
+// #include "third_party/chromium/media/base/video_decoder_config.h"
+
+#include "media/base/video_decoder_config.h"
 
 namespace cobalt {
 namespace media {

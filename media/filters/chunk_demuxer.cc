@@ -12,6 +12,9 @@
 #include "base/functional/bind.h"
 #include "base/functional/callback_helpers.h"
 #include "base/strings/string_number_conversions.h"
+#if defined(STARBOARD)
+#include "base/strings/string_split.h"
+#endif  // defined (STARBOARD)
 #include "base/task/bind_post_task.h"
 #ifndef STARBOARD
 #include "base/trace_event/trace_event.h"
@@ -58,16 +61,62 @@ std::string ExpectedCodecs(const std::string& content_type,
   return codecs;
 }
 
+#if defined(STARBOARD)
+
+// Parse type and codecs from mime type. It will return "video/mp4" and
+// "avc1.42E01E, mp4a.40.2" for "video/mp4; codecs="avc1.42E01E, mp4a.40.2".
+// Note that this function does minimum validation as the media stack will check
+// the type and codecs strictly.
+bool ParseMimeType(const std::string& mime_type,
+                   std::string* type,
+                   std::string* codecs) {
+  DCHECK(type);
+  DCHECK(codecs);
+  static const char kCodecs[] = "codecs=";
+
+  // SplitString will also trim the results.
+  std::vector<std::string> tokens = ::base::SplitString(
+      mime_type, ";", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+  // The first one has to be mime type with delimiter '/' like 'video/mp4'.
+  if (tokens.empty() || tokens[0].find('/') == tokens[0].npos) {
+    return false;
+  }
+  *type = tokens[0];
+  codecs->clear();
+  for (size_t i = 1; i < tokens.size(); ++i) {
+    if (strncasecmp(tokens[i].c_str(), kCodecs, strlen(kCodecs))) {
+      continue;
+    }
+    *codecs = tokens[i].substr(strlen(kCodecs));
+    base::TrimString(*codecs, " \"", codecs);
+    break;
+  }
+  // It is possible to not having any codecs, and will leave the validation to
+  // underlying parsers.
+  return true;
+}
+
+#endif  // defined (STARBOARD)
+
 }  // namespace
 
 namespace media {
 
+#if defined(STARBOARD)
+ChunkDemuxerStream::ChunkDemuxerStream(const std::string& mime_type,
+                                       Type type,
+                                       MediaTrack::Id media_track_id)
+    : mime_type_(mime_type),
+      type_(type),
+#else   // defined (STARBOARD)
 ChunkDemuxerStream::ChunkDemuxerStream(Type type, MediaTrack::Id media_track_id)
     : type_(type),
+#endif  // defined (STARBOARD)
       liveness_(StreamLiveness::kUnknown),
       media_track_id_(media_track_id),
       state_(UNINITIALIZED),
-      is_enabled_(true) {}
+      is_enabled_(true) {
+}
 
 void ChunkDemuxerStream::StartReturningData() {
   DVLOG(1) << "ChunkDemuxerStream::StartReturningData()";
@@ -80,8 +129,13 @@ void ChunkDemuxerStream::AbortReads() {
   DVLOG(1) << "ChunkDemuxerStream::AbortReads()";
   base::AutoLock auto_lock(lock_);
   ChangeState_Locked(RETURNING_ABORT_FOR_READS);
-  if (read_cb_)
+  if (read_cb_) {
+#if defined(STARBOARD)
     std::move(read_cb_).Run(kAborted, {});
+#else   // defined (STARBOARD)
+    std::move(read_cb_).Run(kAborted, nullptr);
+#endif  // defined (STARBOARD)
+  }
 }
 
 void ChunkDemuxerStream::CompletePendingReadIfPossible() {
@@ -100,8 +154,13 @@ void ChunkDemuxerStream::Shutdown() {
   // Pass an end of stream buffer to the pending callback to signal that no more
   // data will be sent.
   if (read_cb_) {
+#if defined(STARBOARD)
     std::move(read_cb_).Run(DemuxerStream::kOk,
                             {StreamParserBuffer::CreateEOSBuffer()});
+#else   // defined (STARBOARD)
+    std::move(read_cb_).Run(DemuxerStream::kOk,
+                            StreamParserBuffer::CreateEOSBuffer());
+#endif  // defined (STARBOARD)
   }
 }
 
@@ -122,6 +181,9 @@ void ChunkDemuxerStream::Seek(base::TimeDelta time) {
   DCHECK(state_ == UNINITIALIZED || state_ == RETURNING_ABORT_FOR_READS)
       << state_;
 
+#if defined(STARBOARD)
+  write_head_ = time;
+#endif  // defined (STARBOARD)
   stream_->Seek(time);
 }
 
@@ -166,6 +228,15 @@ bool ChunkDemuxerStream::EvictCodedFrames(base::TimeDelta media_time,
   // know which GOP currentTime points to.
   return stream_->GarbageCollectIfNeeded(media_time, newDataSize);
 }
+
+#if defined(STARBOARD)
+
+base::TimeDelta ChunkDemuxerStream::GetWriteHead() const {
+  base::AutoLock auto_lock(lock_);
+  return write_head_;
+}
+
+#endif  // defined(STARBOARD)
 
 void ChunkDemuxerStream::OnMemoryPressure(
     base::TimeDelta media_time,
@@ -255,7 +326,12 @@ bool ChunkDemuxerStream::UpdateAudioConfig(const AudioDecoderConfig& config,
   base::AutoLock auto_lock(lock_);
   if (!stream_) {
     DCHECK_EQ(state_, UNINITIALIZED);
+#if defined(STARBOARD)
+    stream_ =
+        std::make_unique<SourceBufferStream>(mime_type_, config, media_log);
+#else   // defined (STARBOARD)
     stream_ = std::make_unique<SourceBufferStream>(config, media_log);
+#endif  // defined (STARBOARD)
     return true;
   }
 
@@ -271,7 +347,12 @@ bool ChunkDemuxerStream::UpdateVideoConfig(const VideoDecoderConfig& config,
 
   if (!stream_) {
     DCHECK_EQ(state_, UNINITIALIZED);
+#if defined(STARBOARD)
+    stream_ =
+        std::make_unique<SourceBufferStream>(mime_type_, config, media_log);
+#else   // defined (STARBOARD)
     stream_ = std::make_unique<SourceBufferStream>(config, media_log);
+#endif  // defined (STARBOARD)
     return true;
   }
 
@@ -306,12 +387,24 @@ void ChunkDemuxerStream::Read(uint32_t count, ReadCB read_cb) {
   read_cb_ = base::BindPostTaskToCurrentDefault(std::move(read_cb));
   requested_buffer_count_ = count;
 
+#if defined(STARBOARD)
+  max_number_of_buffers_to_read_ = count;
+
   if (!is_enabled_) {
     DVLOG(1) << "Read from disabled stream, returning EOS";
     std::move(read_cb_).Run(DemuxerStream::kOk,
                             {StreamParserBuffer::CreateEOSBuffer()});
     return;
   }
+#else   // defined(STARBOARD)
+
+  if (!is_enabled_) {
+    DVLOG(1) << "Read from disabled stream, returning EOS";
+    std::move(read_cb_).Run(DemuxerStream::kOk,
+                            {StreamParserBuffer::CreateEOSBuffer()});
+    return;
+  }
+#endif  // defined(STARBOARD)
 
   CompletePendingReadIfPossible_Locked();
 }
@@ -391,6 +484,75 @@ void ChunkDemuxerStream::ChangeState_Locked(State state) {
 
 ChunkDemuxerStream::~ChunkDemuxerStream() = default;
 
+#if defined(STARBOARD)
+void ChunkDemuxerStream::CompletePendingReadIfPossible_Locked() {
+  lock_.AssertAcquired();
+  DCHECK(read_cb_);
+
+  DemuxerStream::Status status = DemuxerStream::kAborted;
+  std::vector<scoped_refptr<DecoderBuffer>> buffers;
+  base::TimeDelta write_head = write_head_;
+
+  if (pending_config_change_) {
+    status = kConfigChanged;
+    std::move(read_cb_).Run(status, buffers);
+    pending_config_change_ = false;
+    return;
+  }
+
+  if (state_ == RETURNING_DATA_FOR_READS) {
+    for (int i = 0; i < max_number_of_buffers_to_read_; i++) {
+      scoped_refptr<StreamParserBuffer> buffer;
+      SourceBufferStreamStatus stream_status = stream_->GetNextBuffer(&buffer);
+      if (stream_status == SourceBufferStreamStatus::kSuccess) {
+        DVLOG(2) << __func__ << ": found kOk, type " << type_ << ", dts "
+                 << buffer->GetDecodeTimestamp().InSecondsF() << ", pts "
+                 << buffer->timestamp().InSecondsF() << ", dur "
+                 << buffer->duration().InSecondsF() << ", key "
+                 << buffer->is_key_frame();
+        write_head = std::max(write_head, buffer->timestamp());
+        buffers.push_back(std::move(buffer));
+        status = DemuxerStream::kOk;
+      } else if (stream_status == SourceBufferStreamStatus::kEndOfStream) {
+        buffer = StreamParserBuffer::CreateEOSBuffer();
+        DVLOG(2) << __func__ << ": found kOk with EOS buffer, type " << type_;
+        buffers.push_back(std::move(buffer));
+        status = DemuxerStream::kOk;
+        break;
+      } else if (stream_status == SourceBufferStreamStatus::kConfigChange) {
+        DVLOG(2) << __func__ << ": returning kConfigChange, type " << type_;
+        status = kConfigChanged;
+        break;
+      } else if (stream_status == SourceBufferStreamStatus::kNeedBuffer) {
+        if (buffers.empty())
+          return;
+        else
+          break;
+      }
+    }
+
+    if (status == kConfigChanged && !buffers.empty()) {
+      pending_config_change_ = true;
+      status = kOk;
+    }
+
+  } else if (state_ == RETURNING_ABORT_FOR_READS) {
+    status = DemuxerStream::kAborted;
+    DVLOG(2) << __func__ << ": returning kAborted, type " << type_;
+  } else if (state_ == SHUTDOWN) {
+    status = DemuxerStream::kOk;
+    buffers.push_back(std::move(StreamParserBuffer::CreateEOSBuffer()));
+    DVLOG(2) << __func__ << ": returning kOk with EOS buffer, type " << type_;
+  } else if (state_ == UNINITIALIZED) {
+    NOTREACHED();
+    return;
+  }
+
+  DCHECK_LE(write_head_, write_head);
+  write_head_ = write_head;
+  std::move(read_cb_).Run(status, buffers);
+}
+#else   // defined(STARBOARD)
 void ChunkDemuxerStream::CompletePendingReadIfPossible_Locked() {
   lock_.AssertAcquired();
   DCHECK(read_cb_);
@@ -439,6 +601,7 @@ void ChunkDemuxerStream::CompletePendingReadIfPossible_Locked() {
   requested_buffer_count_ = 0;
   std::move(read_cb_).Run(kOk, std::move(buffers));
 }
+#endif  // defined(STARBOARD)
 
 std::pair<SourceBufferStreamStatus, DemuxerStream::DecoderBufferVector>
 ChunkDemuxerStream::GetPendingBuffers_Locked() {
@@ -777,6 +940,22 @@ ChunkDemuxer::Status ChunkDemuxer::AddId(const std::string& id,
                        ExpectedCodecs(content_type, codecs));
 }
 
+#if defined(STARBOARD)
+
+ChunkDemuxer::Status ChunkDemuxer::AddId(const std::string& id,
+                                         const std::string& mime_type) {
+  std::string type, codecs;
+  if (!ParseMimeType(mime_type, &type, &codecs)) {
+    return kNotSupported;
+  }
+
+  DCHECK(id_to_mime_map_.find(id) == id_to_mime_map_.end());
+  id_to_mime_map_[id] = mime_type;
+  return AddId(id, type, codecs);
+}
+
+#endif  // defined (STARBOARD)
+
 ChunkDemuxer::Status ChunkDemuxer::AddIdInternal(
     const std::string& id,
     std::unique_ptr<media::StreamParser> stream_parser,
@@ -989,6 +1168,24 @@ bool ChunkDemuxer::EvictCodedFrames(const std::string& id,
   }
   return itr->second->EvictCodedFrames(currentMediaTime, newDataSize);
 }
+
+#if defined(STARBOARD)
+
+base::TimeDelta ChunkDemuxer::GetWriteHead(const std::string& id) const {
+  base::AutoLock auto_lock(lock_);
+  DCHECK(IsValidId_Locked(id));
+
+  auto iter = id_to_streams_map_.find(id);
+  if (iter == id_to_streams_map_.end() || iter->second.empty()) {
+    // Handled just in case.
+    SB_NOTREACHED();
+    return base::TimeDelta();
+  }
+
+  return iter->second[0]->GetWriteHead();
+}
+
+#endif  // defined(STARBOARD)
 
 bool ChunkDemuxer::AppendToParseBuffer(const std::string& id,
                                        const uint8_t* data,
@@ -1584,8 +1781,16 @@ ChunkDemuxerStream* ChunkDemuxer::CreateDemuxerStream(
       return nullptr;
   }
 
+#if defined(STARBOARD)
+  auto iter = id_to_mime_map_.find(source_id);
+  DCHECK(iter != id_to_mime_map_.end());
+  std::unique_ptr<ChunkDemuxerStream> stream =
+      std::make_unique<ChunkDemuxerStream>(iter->second, type, media_track_id);
+#else   // defined(STARBOARD)
   std::unique_ptr<ChunkDemuxerStream> stream =
       std::make_unique<ChunkDemuxerStream>(type, media_track_id);
+#endif  // defined (STARBOARD)
+
   DCHECK(track_id_to_demux_stream_map_.find(media_track_id) ==
          track_id_to_demux_stream_map_.end());
   track_id_to_demux_stream_map_[media_track_id] = stream.get();

@@ -20,11 +20,10 @@ if (true) {
       "//net",
     ]
   }
-  # group("web_media_player_sandbox") {
-  #   deps = [
-  #     "//cobalt/media/sandbox:web_media_player_sandbox",
-  #   ]
-  # }
+  group("web_media_player_sandbox") {
+    testonly = true
+    deps = [ "//cobalt/media/sandbox:web_media_player_sandbox" ]
+  }
 } else {
   group("gn_all") {
     testonly = true

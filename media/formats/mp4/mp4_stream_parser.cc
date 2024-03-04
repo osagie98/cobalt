@@ -627,9 +627,9 @@ bool MP4StreamParser::ParseMoov(BoxReader* reader) {
       const VideoSampleEntry& entry = samp_descr.video_entries[desc_idx];
 
       if (!entry.IsFormatValid()) {
-        MEDIA_LOG(ERROR, media_log_) << "Unsupported video format 0x"
-                                     << std::hex << entry.format
-                                     << " in stsd box.";
+        MEDIA_LOG(ERROR, media_log_)
+            << "Unsupported video format 0x" << std::hex << entry.format
+            << " in stsd box.";
         return false;
       }
 
@@ -1008,12 +1008,18 @@ ParseResult MP4StreamParser::EnqueueSample(BufferQueueMap* buffers) {
     // else, use the existing config.
   }
 
-  StreamParserBuffer::Type buffer_type = audio ? DemuxerStream::AUDIO :
-      DemuxerStream::VIDEO;
+  StreamParserBuffer::Type buffer_type =
+      audio ? DemuxerStream::AUDIO : DemuxerStream::VIDEO;
 
+#if defined(STARBOARD)
+  scoped_refptr<StreamParserBuffer> stream_buf =
+      StreamParserBuffer::CopyFrom(&frame_buf[0], frame_buf.size(), is_keyframe,
+                                   buffer_type, runs_->track_id());
+#else   // defined(STARBOARD)
   auto stream_buf = StreamParserBuffer::FromExternalMemory(
       std::make_unique<ExternalMemoryAdapter>(std::move(frame_buf)),
       is_keyframe, buffer_type, runs_->track_id());
+#endif  // defined(STARBOARD)
 
   if (decrypt_config)
     stream_buf->set_decrypt_config(std::move(decrypt_config));

@@ -4,11 +4,16 @@
 #ifndef UI_GFX_COLOR_SPACE_H_
 #define UI_GFX_COLOR_SPACE_H_
 #include <stdint.h>
+#if defined(STARBOARD)
+#include <iomanip>
+#endif  // defined(STARBOARD)
 #include <iosfwd>
 #include <string>
 #include "base/gtest_prod_util.h"
 #include "build/build_config.h"
-#include "skia/ext/skcolorspace_trfn.h"
+// #include "skia/ext/skcolorspace_trfn.h"
+#include "media/cobalt/skia/ext/skcolorspace_primaries.h"
+#include "media/cobalt/skia/ext/skcolorspace_trfn.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 #include "third_party/skia/include/core/SkRefCnt.h"
 #include "ui/gfx/color_space_export.h"
@@ -247,10 +252,148 @@ class COLOR_SPACE_EXPORT ColorSpace {
   bool operator!=(const ColorSpace& other) const;
   bool operator<(const ColorSpace& other) const;
   size_t GetHash() const;
-  std::string ToString() const;
+  // #if defined (STARBOARD)
+#define PRINT_ENUM_CASE(TYPE, NAME) \
+  case TYPE::NAME:                  \
+    ss << #NAME;                    \
+    break;
+  std::string ToString() const {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(4);
+    if (primaries_ != PrimaryID::CUSTOM)
+      ss << "{primaries:";
+    switch (primaries_) {
+      PRINT_ENUM_CASE(PrimaryID, INVALID)
+      PRINT_ENUM_CASE(PrimaryID, BT709)
+      PRINT_ENUM_CASE(PrimaryID, BT470M)
+      PRINT_ENUM_CASE(PrimaryID, BT470BG)
+      PRINT_ENUM_CASE(PrimaryID, SMPTE170M)
+      PRINT_ENUM_CASE(PrimaryID, SMPTE240M)
+      PRINT_ENUM_CASE(PrimaryID, FILM)
+      PRINT_ENUM_CASE(PrimaryID, BT2020)
+      PRINT_ENUM_CASE(PrimaryID, SMPTEST428_1)
+      PRINT_ENUM_CASE(PrimaryID, SMPTEST431_2)
+      PRINT_ENUM_CASE(PrimaryID, P3)
+      PRINT_ENUM_CASE(PrimaryID, XYZ_D50)
+      PRINT_ENUM_CASE(PrimaryID, ADOBE_RGB)
+      PRINT_ENUM_CASE(PrimaryID, APPLE_GENERIC_RGB)
+      PRINT_ENUM_CASE(PrimaryID, WIDE_GAMUT_COLOR_SPIN)
+      case PrimaryID::CUSTOM:
+        ss << skia::SkColorSpacePrimariesToString(GetPrimaries());
+        break;
+    }
+    ss << ", transfer:";
+    switch (transfer_) {
+      PRINT_ENUM_CASE(TransferID, INVALID)
+      PRINT_ENUM_CASE(TransferID, BT709)
+      PRINT_ENUM_CASE(TransferID, BT709_APPLE)
+      PRINT_ENUM_CASE(TransferID, GAMMA18)
+      PRINT_ENUM_CASE(TransferID, GAMMA22)
+      PRINT_ENUM_CASE(TransferID, GAMMA24)
+      PRINT_ENUM_CASE(TransferID, GAMMA28)
+      PRINT_ENUM_CASE(TransferID, SMPTE170M)
+      PRINT_ENUM_CASE(TransferID, SMPTE240M)
+      PRINT_ENUM_CASE(TransferID, LINEAR)
+      PRINT_ENUM_CASE(TransferID, LOG)
+      PRINT_ENUM_CASE(TransferID, LOG_SQRT)
+      PRINT_ENUM_CASE(TransferID, IEC61966_2_4)
+      PRINT_ENUM_CASE(TransferID, BT1361_ECG)
+      PRINT_ENUM_CASE(TransferID, SRGB)
+      PRINT_ENUM_CASE(TransferID, BT2020_10)
+      PRINT_ENUM_CASE(TransferID, BT2020_12)
+      PRINT_ENUM_CASE(TransferID, SMPTEST428_1)
+      PRINT_ENUM_CASE(TransferID, SRGB_HDR)
+      PRINT_ENUM_CASE(TransferID, LINEAR_HDR)
+      case TransferID::HLG:
+        ss << "HLG (SDR white point ";
+        if (transfer_params_[0] == 0.f)
+          ss << "default " << kDefaultSDRWhiteLevel;
+        else
+          ss << transfer_params_[0];
+        ss << " nits)";
+        break;
+      case TransferID::PQ:
+        ss << "PQ (SDR white point ";
+        if (transfer_params_[0] == 0.f)
+          ss << "default " << kDefaultSDRWhiteLevel;
+        else
+          ss << transfer_params_[0];
+        ss << " nits)";
+        break;
+      case TransferID::CUSTOM: {
+        skcms_TransferFunction fn;
+        GetTransferFunction(&fn);
+        ss << fn.c << "*x + " << fn.f << " if x < " << fn.d << " else (" << fn.a
+           << "*x + " << fn.b << ")**" << fn.g << " + " << fn.e;
+        break;
+      }
+      case TransferID::CUSTOM_HDR: {
+        skcms_TransferFunction fn;
+        GetTransferFunction(&fn);
+        if (fn.g == 1.0f && fn.a > 0.0f && fn.b == 0.0f && fn.c == 0.0f &&
+            fn.d == 0.0f && fn.e == 0.0f && fn.f == 0.0f) {
+          ss << "LINEAR_HDR (slope " << fn.a << ")";
+          break;
+        }
+        ss << fn.c << "*x + " << fn.f << " if |x| < " << fn.d
+           << " else sign(x)*(" << fn.a << "*|x| + " << fn.b << ")**" << fn.g
+           << " + " << fn.e;
+        break;
+      }
+      case TransferID::PIECEWISE_HDR: {
+        skcms_TransferFunction fn;
+        GetTransferFunction(&fn);
+        ss << "sRGB to 1 at " << transfer_params_[0] << ", linear to "
+           << transfer_params_[1] << " at 1";
+        break;
+      }
+      case TransferID::SCRGB_LINEAR_80_NITS:
+        ss << "scRGB linear (80 nit white)";
+        break;
+    }
+    ss << ", matrix:";
+    switch (matrix_) {
+      PRINT_ENUM_CASE(MatrixID, INVALID)
+      PRINT_ENUM_CASE(MatrixID, RGB)
+      PRINT_ENUM_CASE(MatrixID, BT709)
+      PRINT_ENUM_CASE(MatrixID, FCC)
+      PRINT_ENUM_CASE(MatrixID, BT470BG)
+      PRINT_ENUM_CASE(MatrixID, SMPTE170M)
+      PRINT_ENUM_CASE(MatrixID, SMPTE240M)
+      PRINT_ENUM_CASE(MatrixID, YCOCG)
+      PRINT_ENUM_CASE(MatrixID, BT2020_NCL)
+      PRINT_ENUM_CASE(MatrixID, BT2020_CL)
+      PRINT_ENUM_CASE(MatrixID, YDZDX)
+      PRINT_ENUM_CASE(MatrixID, GBR)
+    }
+    ss << ", range:";
+    switch (range_) {
+      PRINT_ENUM_CASE(RangeID, INVALID)
+      PRINT_ENUM_CASE(RangeID, LIMITED)
+      PRINT_ENUM_CASE(RangeID, FULL)
+      PRINT_ENUM_CASE(RangeID, DERIVED)
+    }
+    ss << "}";
+    return ss.str();
+  }
+#undef PRINT_ENUM_CASE
+  // #else
+  //   std::string ToString() const;
+  // #endif  // defined(STABOARD)
   bool IsWide() const;
   // Returns true if the transfer function is an HDR one (SMPTE 2084, HLG, etc).
-  bool IsHDR() const;
+  // #if defined(STABOARD)
+  bool IsHDR() const {
+    return transfer_ == TransferID::PQ || transfer_ == TransferID::HLG ||
+           transfer_ == TransferID::LINEAR_HDR ||
+           transfer_ == TransferID::SRGB_HDR ||
+           transfer_ == TransferID::CUSTOM_HDR ||
+           transfer_ == TransferID::PIECEWISE_HDR ||
+           transfer_ == TransferID::SCRGB_LINEAR_80_NITS;
+  }
+  // #else
+  //   bool IsHDR() const;
+  // #endif  // defined(STABOARD)
   // Returns true if there exists a default tone mapping that should be applied
   // when drawing content with this color space. This is true for spaces with
   // the PQ and HLG transfer functions.

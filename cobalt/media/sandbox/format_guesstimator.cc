@@ -30,6 +30,7 @@
 #include "media/base/audio_decoder_config.h"
 #include "media/base/demuxer_stream.h"
 #include "media/base/media_tracks.h"
+#include "media/base/stream_parser.h"
 #include "media/base/video_codecs.h"
 #include "media/base/video_decoder_config.h"
 #include "media/filters/chunk_demuxer.h"
@@ -39,8 +40,11 @@
 #include "starboard/common/string.h"
 #include "starboard/memory.h"
 #include "starboard/types.h"
-#include "third_party/chromium/media/base/timestamp_constants.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/geometry/size.h"
+// #include "third_party/chromium/media/base/timestamp_constants.h"
+// #include "third_party/chromium/media/cobalt/ui/gfx/geometry/size.h"
+
+#include "media/base/timestamp_constants.h"
+#include "ui/gfx/geometry/size.h"
 
 namespace cobalt {
 namespace media {
@@ -205,9 +209,17 @@ void FormatGuesstimator::InitializeAsAdaptive(const base::FilePath& path,
         }));
 
     base::TimeDelta unused_timestamp;
-    if (!chunk_demuxer->AppendData(
-            id, header.data(), header.size(), base::TimeDelta(),
-            ::media::kInfiniteDuration, &unused_timestamp)) {
+    // if (!chunk_demuxer->AppendData(
+    //         id, header.data(), header.size(), base::TimeDelta(),
+    //         ::media::kInfiniteDuration, &unused_timestamp)) {
+    //   // Failing to |AppendData()| means the chosen format is not the file's
+    //   // true format.
+    //   continue;
+    // }
+    if (!chunk_demuxer->AppendToParseBuffer(id, header.data(), header.size()) ||
+        chunk_demuxer->RunSegmentParserLoop(
+            id, base::TimeDelta(), ::media::kInfiniteDuration,
+            &unused_timestamp) == ::media::StreamParser::ParseStatus::kFailed) {
       // Failing to |AppendData()| means the chosen format is not the file's
       // true format.
       continue;

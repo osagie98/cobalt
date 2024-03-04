@@ -36,13 +36,16 @@
 #include "cobalt/system_window/system_window.h"
 #include "starboard/common/mutex.h"
 #include "starboard/player.h"
-#include "third_party/chromium/media/base/media_log.h"
+// #include "third_party/chromium/media/base/media_log.h"
+
+#include "media/base/media_log.h"
 
 namespace cobalt {
 namespace media {
 
-class MediaModule : public WebMediaPlayerFactory,
-                    public WebMediaPlayerDelegate {
+class MediaModule final : public WebMediaPlayerFactory,
+                          public WebMediaPlayerDelegate,
+                          public ::media::MediaLog {
  public:
   struct Options {
     Options() {}
@@ -96,6 +99,12 @@ class MediaModule : public WebMediaPlayerFactory,
     Resume(resource_provider);
   }
 
+ protected:
+  // MediaLog implementation.  May be called from any thread, but will only
+  // use |remote_media_log_| on |task_runner_|.
+  void AddLogRecordLocked(
+      std::unique_ptr<::media::MediaLogRecord> event) override {}
+
  private:
   void RegisterDebugState(WebMediaPlayer* player);
   void DeregisterDebugState();
@@ -114,7 +123,7 @@ class MediaModule : public WebMediaPlayerFactory,
   system_window::SystemWindow* system_window_;
   cobalt::render_tree::ResourceProvider* resource_provider_;
 
-  ::media::MediaLog media_log_;
+  // ::media::MediaLog media_log_;
 
   // Protect access to the list of players.
   starboard::Mutex players_lock_;

@@ -62,10 +62,20 @@ class MEDIA_EXPORT SourceBufferStream {
                                    base::TimeDelta* start,
                                    base::TimeDelta* end);
 
+#if defined(STARBOARD)
+  SourceBufferStream(const std::string& mime_type,
+                     const AudioDecoderConfig& audio_config,
+                     MediaLog* media_log);
+  SourceBufferStream(const std::string& mime_type,
+                     const VideoDecoderConfig& video_config,
+                     MediaLog* media_log);
+#else   // defined (STARBOARD)
   SourceBufferStream(const AudioDecoderConfig& audio_config,
                      MediaLog* media_log);
   SourceBufferStream(const VideoDecoderConfig& video_config,
                      MediaLog* media_log);
+#endif  // defined (STARBOARD)
+
   SourceBufferStream(const TextTrackConfig& text_config, MediaLog* media_log);
 
   SourceBufferStream(const SourceBufferStream&) = delete;
@@ -90,7 +100,8 @@ class MEDIA_EXPORT SourceBufferStream {
   //
   // |duration| is the current duration of the presentation. It is
   // required by the computation outlined in the spec.
-  void Remove(base::TimeDelta start, base::TimeDelta end,
+  void Remove(base::TimeDelta start,
+              base::TimeDelta end,
               base::TimeDelta duration);
 
   // Frees up space if the SourceBufferStream is taking up too much memory.
@@ -179,9 +190,7 @@ class MEDIA_EXPORT SourceBufferStream {
   // yet.
   base::TimeDelta GetMaxInterbufferDistance() const;
 
-  void set_memory_limit(size_t memory_limit) {
-    memory_limit_ = memory_limit;
-  }
+  void set_memory_limit(size_t memory_limit) { memory_limit_ = memory_limit; }
 
   // A helper function for detecting video/audio config change, so that we
   // can "peek" the next buffer instead of dequeuing it directly from the source
@@ -398,6 +407,14 @@ class MEDIA_EXPORT SourceBufferStream {
   // If |out_buffer| has preroll, sets |pending_buffer_| to feed out preroll and
   // returns true.  Otherwise returns false.
   bool SetPendingBuffer(scoped_refptr<StreamParserBuffer>* out_buffer);
+
+#if defined(STARBOARD)
+  // Returns the accumulated duration of all ranges.  This is solely used by
+  // duration base garbage collection.
+  base::TimeDelta GetBufferedDurationForGarbageCollection() const;
+
+  const std::string mime_type_;
+#endif  // defined (STARBOARD)
 
   // Used to report log messages that can help the web developer figure out what
   // is wrong with the content.

@@ -5,7 +5,8 @@
 #define UI_GFX_HDR_METADATA_H_
 #include <stdint.h>
 #include <string>
-#include "skia/ext/skcolorspace_primaries.h"
+// #include "skia/ext/skcolorspace_primaries.h"
+#include "media/cobalt/skia/ext/skcolorspace_primaries.h"
 #include "third_party/abseil-cpp/absl/types/optional.h"
 #include "ui/gfx/color_space_export.h"
 #include "ui/gfx/geometry/point_f.h"
