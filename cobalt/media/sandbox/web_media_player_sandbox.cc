@@ -34,8 +34,12 @@
 #include "starboard/event.h"
 #include "starboard/log.h"
 #include "starboard/system.h"
-#include "third_party/chromium/media/base/timestamp_constants.h"
-#include "third_party/chromium/media/filters/chunk_demuxer.h"
+// #include "media/base/timestamp_constants.h"
+// #include "media/filters/chunk_demuxer.h"
+
+#include "media/base/timestamp_constants.h"
+#include "media/filters/chunk_demuxer.h"
+
 
 namespace cobalt {
 namespace media {
@@ -350,9 +354,15 @@ class Application {
 
       file->Read(reinterpret_cast<char*>(buffer.data()), bytes_to_append);
       base::TimeDelta timestamp_offset;
-      auto appended = chunk_demuxer_->AppendData(
-          id, buffer.data(), bytes_to_append, base::TimeDelta(),
-          ::media::kInfiniteDuration, &timestamp_offset);
+      bool appended = chunk_demuxer_->AppendToParseBuffer(id, buffer.data(),
+                                                          bytes_to_append);
+      appended &=
+          chunk_demuxer_->RunSegmentParserLoop(
+              id, base::TimeDelta(), ::media::kInfiniteDuration,
+              &timestamp_offset) != ::media::StreamParser::ParseStatus::kFailed;
+      // auto appended = chunk_demuxer_->AppendData(
+      //     id, buffer.data(), bytes_to_append, base::TimeDelta(),
+      //     ::media::kInfiniteDuration, &timestamp_offset);
       SB_DCHECK(appended);
 
       *offset += bytes_to_append;

@@ -26,13 +26,13 @@
 #include "base/trace_event/trace_event.h"
 #include "cobalt/base/statistics.h"
 #include "cobalt/media/base/format_support_query_metrics.h"
+#include "media/base/starboard_utils.h"
 #include "starboard/common/media.h"
 #include "starboard/common/player.h"
 #include "starboard/common/string.h"
 #include "starboard/configuration.h"
 #include "starboard/memory.h"
 #include "starboard/once.h"
-#include "third_party/chromium/media/base/starboard_utils.h"
 
 namespace cobalt {
 namespace media {

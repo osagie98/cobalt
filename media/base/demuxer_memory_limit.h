@@ -20,16 +20,16 @@ namespace media {
 MEDIA_EXPORT size_t
 GetDemuxerStreamAudioMemoryLimit(const AudioDecoderConfig* audio_config);
 
-#if defined(STARBOARD)
-MEDIA_EXPORT size_t
-GetDemuxerStreamVideoMemoryLimit(Demuxer::DemuxerTypes demuxer_type,
-                                 const VideoDecoderConfig* video_config,
-                                 const std::string& mime_type);
-#else   // defined(STARBOARD)
+// #if defined(STARBOARD)
+// MEDIA_EXPORT size_t
+// GetDemuxerStreamVideoMemoryLimit(Demuxer::DemuxerTypes demuxer_type,
+//                                  const VideoDecoderConfig* video_config,
+//                                  const std::string& mime_type);
+// #else   // defined(STARBOARD)
 MEDIA_EXPORT size_t
 GetDemuxerStreamVideoMemoryLimit(Demuxer::DemuxerTypes demuxer_type,
                                  const VideoDecoderConfig* video_config);
-#endif  // defined(STARBOARD)
+// #endif  // defined(STARBOARD)
 
 // The maximum amount of data (in bytes) a demuxer can keep in memory overall.
 MEDIA_EXPORT size_t GetDemuxerMemoryLimit(Demuxer::DemuxerTypes demuxer_type);

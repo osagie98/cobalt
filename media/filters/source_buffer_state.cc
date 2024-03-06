@@ -695,9 +695,9 @@ bool SourceBufferState::OnNewConfigs(
       const auto& it =
           base::ranges::find(expected_acodecs, audio_config.codec());
       if (it == expected_acodecs.end()) {
-        MEDIA_LOG(ERROR, media_log_) << "Audio stream codec "
-                                     << GetCodecName(audio_config.codec())
-                                     << " doesn't match SourceBuffer codecs.";
+        MEDIA_LOG(ERROR, media_log_)
+            << "Audio stream codec " << GetCodecName(audio_config.codec())
+            << " doesn't match SourceBuffer codecs.";
         return false;
       }
       expected_acodecs.erase(it);
@@ -777,9 +777,9 @@ bool SourceBufferState::OnNewConfigs(
       const auto& it =
           base::ranges::find(expected_vcodecs, video_config.codec());
       if (it == expected_vcodecs.end()) {
-        MEDIA_LOG(ERROR, media_log_) << "Video stream codec "
-                                     << GetCodecName(video_config.codec())
-                                     << " doesn't match SourceBuffer codecs.";
+        MEDIA_LOG(ERROR, media_log_)
+            << "Video stream codec " << GetCodecName(video_config.codec())
+            << " doesn't match SourceBuffer codecs.";
         return false;
       }
       expected_vcodecs.erase(it);
@@ -825,8 +825,8 @@ bool SourceBufferState::OnNewConfigs(
       success &= stream->UpdateVideoConfig(video_config, allow_codec_changes,
                                            media_log_);
     } else {
-      MEDIA_LOG(ERROR, media_log_) << "Error: unsupported media track type "
-                                   << track->type();
+      MEDIA_LOG(ERROR, media_log_)
+          << "Error: unsupported media track type " << track->type();
       return false;
     }
   }
@@ -901,9 +901,9 @@ bool SourceBufferState::OnNewConfigs(
         TextTrackConfig old_config = stream->text_track_config();
         if (!new_config.Matches(old_config)) {
           success &= false;
-          MEDIA_LOG(ERROR, media_log_) << "New text track config for track ID "
-                                       << config_itr->first
-                                       << " does not match old one.";
+          MEDIA_LOG(ERROR, media_log_)
+              << "New text track config for track ID " << config_itr->first
+              << " does not match old one.";
           break;
         }
       }
@@ -940,9 +940,51 @@ bool SourceBufferState::OnNewConfigs(
   return success;
 }
 
+// #if defined(STARBOARD)
+// void SourceBufferState::SetSourceBufferStreamMemoryLimit(size_t limit) {
+//   LOG(INFO) << "Setting SourceBuffferStream MemoryLimit Override: " << limit;
+//   stream_memory_limit_override_ = limit;
+//   SetStreamMemoryLimits();
+// }
+
+// size_t SourceBufferState::GetSourceBufferStreamMemoryLimit() {
+//   // a source buffer can be backed my multiple Demuxer streams, although at
+//   // YouTube we usually only have a single one. If we've set an override then
+//   // all values will be the same, but we shouldn't assume that, so instead
+//   we'll
+//   // return the largest here if there are multiple.
+//   size_t memory_limit = 0;
+//   for (const auto& it : audio_streams_) {
+//     memory_limit = std::max(memory_limit, it.second->GetStreamMemoryLimit());
+//   }
+//   for (const auto& it : video_streams_) {
+//     memory_limit = std::max(memory_limit, it.second->GetStreamMemoryLimit());
+//   }
+//   return memory_limit;
+// }
+// #endif  // defined(STARBOARD)
+
 void SourceBufferState::SetStreamMemoryLimits() {
+  // #if defined(STARBOARD)
+  //   LOG(INFO) << "Custom SourceBuffer memory limit="
+  //             << stream_memory_limit_override_ << ". No-op.";
+  //   // if (stream_memory_limit_override_) {
+  //   //   for (const auto& it : audio_streams_) {
+  //   //
+  //   it.second->SetStreamMemoryLimitOverride(stream_memory_limit_override_);
+  //   //   }
+  //   //   for (const auto& it : video_streams_) {
+  //   //
+  //   it.second->SetStreamMemoryLimitOverride(stream_memory_limit_override_);
+  //   //   }
+  //   // }
+  // #else
   size_t audio_buf_size_limit =
+#if defined(STARBOARD)
+      GetMSEBufferSizeLimitIfExists("mse-audio-buffer-size-limit-mb");
+#else
       GetMSEBufferSizeLimitIfExists(switches::kMSEAudioBufferSizeLimitMb);
+#endif  // defined STARBOARD
   if (audio_buf_size_limit) {
     MEDIA_LOG(INFO, media_log_)
         << "Custom audio per-track SourceBuffer size limit="
@@ -952,7 +994,11 @@ void SourceBufferState::SetStreamMemoryLimits() {
   }
 
   size_t video_buf_size_limit =
+#if defined(STARBOARD)
+      GetMSEBufferSizeLimitIfExists("mse-video-buffer-size-limit-mb");
+#else
       GetMSEBufferSizeLimitIfExists(switches::kMSEVideoBufferSizeLimitMb);
+#endif  // defined STARBOARD
   if (video_buf_size_limit) {
     MEDIA_LOG(INFO, media_log_)
         << "Custom video per-track SourceBuffer size limit="
@@ -960,6 +1006,7 @@ void SourceBufferState::SetStreamMemoryLimits() {
     for (const auto& it : video_streams_)
       it.second->SetStreamMemoryLimit(video_buf_size_limit);
   }
+  // #endif  // defined(STARBOARD)
 }
 
 void SourceBufferState::OnNewMediaSegment() {
@@ -979,9 +1026,10 @@ void SourceBufferState::OnEndOfMediaSegment() {
       LIMITED_MEDIA_LOG(DEBUG, media_log_, num_missing_track_logs_,
                         kMaxMissingTrackInSegmentLogs)
           << "Media segment did not contain any coded frames for track "
-          << it.first << ", mismatching initialization segment. Therefore, MSE"
-                         " coded frame processing may not interoperably detect"
-                         " discontinuities in appended media.";
+          << it.first
+          << ", mismatching initialization segment. Therefore, MSE"
+             " coded frame processing may not interoperably detect"
+             " discontinuities in appended media.";
     }
   }
   for (const auto& it : video_streams_) {
@@ -989,9 +1037,10 @@ void SourceBufferState::OnEndOfMediaSegment() {
       LIMITED_MEDIA_LOG(DEBUG, media_log_, num_missing_track_logs_,
                         kMaxMissingTrackInSegmentLogs)
           << "Media segment did not contain any coded frames for track "
-          << it.first << ", mismatching initialization segment. Therefore, MSE"
-                         " coded frame processing may not interoperably detect"
-                         " discontinuities in appended media.";
+          << it.first
+          << ", mismatching initialization segment. Therefore, MSE"
+             " coded frame processing may not interoperably detect"
+             " discontinuities in appended media.";
     }
   }
 }

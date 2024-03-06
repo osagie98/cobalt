@@ -27,14 +27,14 @@
 #include "cobalt/media/progressive/data_source_reader.h"
 #include "cobalt/media/progressive/demuxer_extension_wrapper.h"
 #include "cobalt/media/progressive/progressive_demuxer.h"
+#include "media/base/bind_to_current_loop.h"
+#include "media/base/limits.h"
+#include "media/base/timestamp_constants.h"
+#include "media/cobalt/ui/gfx/geometry/rect.h"
+#include "media/cobalt/ui/gfx/geometry/size.h"
+#include "media/filters/chunk_demuxer.h"
 #include "starboard/system.h"
 #include "starboard/types.h"
-#include "third_party/chromium/media/base/bind_to_current_loop.h"
-#include "third_party/chromium/media/base/limits.h"
-#include "third_party/chromium/media/base/timestamp_constants.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/geometry/rect.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/geometry/size.h"
-#include "third_party/chromium/media/filters/chunk_demuxer.h"
 
 namespace cobalt {
 namespace media {
@@ -362,7 +362,8 @@ void WebMediaPlayerImpl::Seek(float seconds) {
     return;
   }
 
-  media_log_->AddEvent<::media::MediaLogEvent::kSeek>(seconds);
+  media_log_->AddEvent<::media::MediaLogEvent::kSeek>(
+      static_cast<double>(seconds));
 
   base::TimeDelta seek_time = ConvertSecondsToTimestamp(seconds);
 
@@ -624,7 +625,7 @@ void WebMediaPlayerImpl::OnPipelineSeek(::media::PipelineStatus status,
     return;
   }
 
-  if (status != ::media::PIPELINE_OK) {
+  if (status.code() != ::media::PipelineStatus::Codes::PIPELINE_OK) {
     OnPipelineError(status,
                     "Failed pipeline seek with error: " + error_message + ".");
     return;
@@ -641,7 +642,7 @@ void WebMediaPlayerImpl::OnPipelineSeek(::media::PipelineStatus status,
 
 void WebMediaPlayerImpl::OnPipelineEnded(::media::PipelineStatus status) {
   DCHECK_EQ(main_loop_, base::MessageLoop::current());
-  if (status != ::media::PIPELINE_OK) {
+  if (status.code() != ::media::PipelineStatus::Codes::PIPELINE_OK) {
     OnPipelineError(status, "Failed pipeline end.");
     return;
   }
@@ -666,28 +667,29 @@ void WebMediaPlayerImpl::OnPipelineError(::media::PipelineStatus error,
         WebMediaPlayer::kNetworkStateFormatError,
         message.empty()
             ? base::StringPrintf("Ready state have nothing. Error: (%d)",
-                                 static_cast<int>(error))
+                                 static_cast<int>(error.code()))
             : base::StringPrintf(
                   "Ready state have nothing: Error: (%d), Message: %s",
-                  static_cast<int>(error), message.c_str()));
+                  static_cast<int>(error.code()), message.c_str()));
     return;
   }
 
   std::string default_message;
-  switch (error) {
-    case ::media::PIPELINE_OK:
+  switch (error.code()) {
+    case ::media::PipelineStatus::Codes::PIPELINE_OK:
       NOTREACHED() << "PIPELINE_OK isn't an error!";
       break;
 
-    case ::media::PIPELINE_ERROR_NETWORK:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_NETWORK:
       SetNetworkError(WebMediaPlayer::kNetworkStateNetworkError,
                       message.empty() ? "Pipeline network error." : message);
       break;
-    case ::media::PIPELINE_ERROR_READ:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_READ:
       SetNetworkError(WebMediaPlayer::kNetworkStateNetworkError,
                       message.empty() ? "Pipeline read error." : message);
       break;
-    case ::media::CHUNK_DEMUXER_ERROR_EOS_STATUS_NETWORK_ERROR:
+    case ::media::PipelineStatus::Codes::
+        CHUNK_DEMUXER_ERROR_EOS_STATUS_NETWORK_ERROR:
       SetNetworkError(
           WebMediaPlayer::kNetworkStateNetworkError,
           message.empty() ? "Chunk demuxer eos network error." : message);
@@ -696,77 +698,79 @@ void WebMediaPlayerImpl::OnPipelineError(::media::PipelineStatus error,
     // TODO(vrk): Because OnPipelineInitialize() directly reports the
     // NetworkStateFormatError instead of calling OnPipelineError(), I believe
     // this block can be deleted. Should look into it! (crbug.com/126070)
-    case ::media::PIPELINE_ERROR_INITIALIZATION_FAILED:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_INITIALIZATION_FAILED:
       SetNetworkError(
           WebMediaPlayer::kNetworkStateFormatError,
           message.empty() ? "Pipeline initialization failed." : message);
       break;
-    case ::media::PIPELINE_ERROR_COULD_NOT_RENDER:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_COULD_NOT_RENDER:
       SetNetworkError(WebMediaPlayer::kNetworkStateFormatError,
                       message.empty() ? "Pipeline could not render." : message);
       break;
-    case ::media::PIPELINE_ERROR_EXTERNAL_RENDERER_FAILED:
+    case ::media::PipelineStatus::Codes::
+        PIPELINE_ERROR_EXTERNAL_RENDERER_FAILED:
       SetNetworkError(
           WebMediaPlayer::kNetworkStateFormatError,
           message.empty() ? "Pipeline external renderer failed." : message);
       break;
-    case ::media::DEMUXER_ERROR_COULD_NOT_OPEN:
+    case ::media::PipelineStatus::Codes::DEMUXER_ERROR_COULD_NOT_OPEN:
       SetNetworkError(WebMediaPlayer::kNetworkStateFormatError,
                       message.empty() ? "Demuxer could not open." : message);
       break;
-    case ::media::DEMUXER_ERROR_COULD_NOT_PARSE:
+    case ::media::PipelineStatus::Codes::DEMUXER_ERROR_COULD_NOT_PARSE:
       SetNetworkError(WebMediaPlayer::kNetworkStateFormatError,
                       message.empty() ? "Demuxer could not parse." : message);
       break;
-    case ::media::DEMUXER_ERROR_NO_SUPPORTED_STREAMS:
+    case ::media::PipelineStatus::Codes::DEMUXER_ERROR_NO_SUPPORTED_STREAMS:
       SetNetworkError(
           WebMediaPlayer::kNetworkStateFormatError,
           message.empty() ? "Demuxer no supported streams." : message);
       break;
-    case ::media::DECODER_ERROR_NOT_SUPPORTED:
+    case ::media::PipelineStatus::Codes::DECODER_ERROR_NOT_SUPPORTED:
       SetNetworkError(WebMediaPlayer::kNetworkStateFormatError,
                       message.empty() ? "Decoder not supported." : message);
       break;
-    case ::media::DEMUXER_ERROR_DETECTED_HLS:
+    case ::media::PipelineStatus::Codes::DEMUXER_ERROR_DETECTED_HLS:
       SetNetworkError(WebMediaPlayer::kNetworkStateFormatError,
                       message.empty() ? "Detected HLS format." : message);
       break;
 
-    case ::media::PIPELINE_ERROR_DECODE:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_DECODE:
       SetNetworkError(WebMediaPlayer::kNetworkStateDecodeError,
                       message.empty() ? "Pipeline decode error." : message);
       break;
-    case ::media::PIPELINE_ERROR_ABORT:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_ABORT:
       SetNetworkError(WebMediaPlayer::kNetworkStateDecodeError,
                       message.empty() ? "Pipeline abort." : message);
       break;
-    case ::media::PIPELINE_ERROR_INVALID_STATE:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_INVALID_STATE:
       SetNetworkError(WebMediaPlayer::kNetworkStateDecodeError,
                       message.empty() ? "Pipeline invalid state." : message);
       break;
-    case ::media::CHUNK_DEMUXER_ERROR_APPEND_FAILED:
+    case ::media::PipelineStatus::Codes::CHUNK_DEMUXER_ERROR_APPEND_FAILED:
       SetNetworkError(
           WebMediaPlayer::kNetworkStateDecodeError,
           message.empty() ? "Chunk demuxer append failed." : message);
       break;
-    case ::media::CHUNK_DEMUXER_ERROR_EOS_STATUS_DECODE_ERROR:
+    case ::media::PipelineStatus::Codes::
+        CHUNK_DEMUXER_ERROR_EOS_STATUS_DECODE_ERROR:
       SetNetworkError(
           WebMediaPlayer::kNetworkStateDecodeError,
           message.empty() ? "Chunk demuxer eos decode error." : message);
       break;
-    case ::media::AUDIO_RENDERER_ERROR:
+    case ::media::PipelineStatus::Codes::AUDIO_RENDERER_ERROR:
       SetNetworkError(WebMediaPlayer::kNetworkStateDecodeError,
                       message.empty() ? "Audio renderer error." : message);
       break;
-    case ::media::PIPELINE_ERROR_HARDWARE_CONTEXT_RESET:
+    case ::media::PipelineStatus::Codes::PIPELINE_ERROR_HARDWARE_CONTEXT_RESET:
       SetNetworkError(WebMediaPlayer::kNetworkStateDecodeError,
                       message.empty() ? "Hardware context reset." : message);
       break;
 
-    case ::media::PLAYBACK_CAPABILITY_CHANGED:
-      SetNetworkError(WebMediaPlayer::kNetworkStateCapabilityChangedError,
-                      message.empty() ? "Capability changed." : message);
-      break;
+    // case ::media::PLAYBACK_CAPABILITY_CHANGED:
+    //   SetNetworkError(WebMediaPlayer::kNetworkStateCapabilityChangedError,
+    //                   message.empty() ? "Capability changed." : message);
+    //   break;
     default:
       NOTREACHED();
       break;

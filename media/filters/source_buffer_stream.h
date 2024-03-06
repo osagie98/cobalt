@@ -62,19 +62,19 @@ class MEDIA_EXPORT SourceBufferStream {
                                    base::TimeDelta* start,
                                    base::TimeDelta* end);
 
-#if defined(STARBOARD)
-  SourceBufferStream(const std::string& mime_type,
-                     const AudioDecoderConfig& audio_config,
-                     MediaLog* media_log);
-  SourceBufferStream(const std::string& mime_type,
-                     const VideoDecoderConfig& video_config,
-                     MediaLog* media_log);
-#else   // defined (STARBOARD)
+  // #if defined(STARBOARD)
+  //   SourceBufferStream(const std::string& mime_type,
+  //                      const AudioDecoderConfig& audio_config,
+  //                      MediaLog* media_log);
+  //   SourceBufferStream(const std::string& mime_type,
+  //                      const VideoDecoderConfig& video_config,
+  //                      MediaLog* media_log);
+  // #else   // defined (STARBOARD)
   SourceBufferStream(const AudioDecoderConfig& audio_config,
                      MediaLog* media_log);
   SourceBufferStream(const VideoDecoderConfig& video_config,
                      MediaLog* media_log);
-#endif  // defined (STARBOARD)
+  // #endif  // defined (STARBOARD)
 
   SourceBufferStream(const TextTrackConfig& text_config, MediaLog* media_log);
 
@@ -196,6 +196,16 @@ class MEDIA_EXPORT SourceBufferStream {
   // can "peek" the next buffer instead of dequeuing it directly from the source
   // stream buffer queue.
   bool IsNextBufferConfigChanged();
+
+  // #if defined(STARBOARD)
+  //   size_t memory_limit() const {
+  //     return memory_limit_;
+  //   }
+  //   void set_memory_limit_override(size_t memory_limit) {
+  //     memory_limit_ = memory_limit;
+  //     memory_override_ = true;
+  //   }
+  // #endif  // defined (STARBOARD)
 
  private:
   friend class SourceBufferStreamTest;
@@ -411,9 +421,10 @@ class MEDIA_EXPORT SourceBufferStream {
 #if defined(STARBOARD)
   // Returns the accumulated duration of all ranges.  This is solely used by
   // duration base garbage collection.
-  base::TimeDelta GetBufferedDurationForGarbageCollection() const;
+  // base::TimeDelta GetBufferedDurationForGarbageCollection() const;
 
   const std::string mime_type_;
+  bool memory_override_ = false;
 #endif  // defined (STARBOARD)
 
   // Used to report log messages that can help the web developer figure out what

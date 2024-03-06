@@ -102,21 +102,20 @@ bool ParseMimeType(const std::string& mime_type,
 
 namespace media {
 
-#if defined(STARBOARD)
-ChunkDemuxerStream::ChunkDemuxerStream(const std::string& mime_type,
-                                       Type type,
-                                       MediaTrack::Id media_track_id)
-    : mime_type_(mime_type),
-      type_(type),
-#else   // defined (STARBOARD)
+// #if defined(STARBOARD)
+// ChunkDemuxerStream::ChunkDemuxerStream(const std::string& mime_type,
+//                                        Type type,
+//                                        MediaTrack::Id media_track_id)
+//     : mime_type_(mime_type),
+//       type_(type),
+// #else   // defined (STARBOARD)
 ChunkDemuxerStream::ChunkDemuxerStream(Type type, MediaTrack::Id media_track_id)
     : type_(type),
-#endif  // defined (STARBOARD)
+      // #endif  // defined (STARBOARD)
       liveness_(StreamLiveness::kUnknown),
       media_track_id_(media_track_id),
       state_(UNINITIALIZED),
-      is_enabled_(true) {
-}
+      is_enabled_(true) {}
 
 void ChunkDemuxerStream::StartReturningData() {
   DVLOG(1) << "ChunkDemuxerStream::StartReturningData()";
@@ -229,14 +228,14 @@ bool ChunkDemuxerStream::EvictCodedFrames(base::TimeDelta media_time,
   return stream_->GarbageCollectIfNeeded(media_time, newDataSize);
 }
 
-#if defined(STARBOARD)
+// #if defined(STARBOARD)
 
-base::TimeDelta ChunkDemuxerStream::GetWriteHead() const {
-  base::AutoLock auto_lock(lock_);
-  return write_head_;
-}
+// base::TimeDelta ChunkDemuxerStream::GetWriteHead() const {
+//   base::AutoLock auto_lock(lock_);
+//   return write_head_;
+// }
 
-#endif  // defined(STARBOARD)
+// #endif  // defined(STARBOARD)
 
 void ChunkDemuxerStream::OnMemoryPressure(
     base::TimeDelta media_time,
@@ -326,12 +325,13 @@ bool ChunkDemuxerStream::UpdateAudioConfig(const AudioDecoderConfig& config,
   base::AutoLock auto_lock(lock_);
   if (!stream_) {
     DCHECK_EQ(state_, UNINITIALIZED);
-#if defined(STARBOARD)
-    stream_ =
-        std::make_unique<SourceBufferStream>(mime_type_, config, media_log);
-#else   // defined (STARBOARD)
+    // #if defined(STARBOARD)
+    //     stream_ =
+    //         std::make_unique<SourceBufferStream>(mime_type_, config,
+    //         media_log);
+    // #else   // defined (STARBOARD)
     stream_ = std::make_unique<SourceBufferStream>(config, media_log);
-#endif  // defined (STARBOARD)
+    // #endif  // defined (STARBOARD)
     return true;
   }
 
@@ -347,12 +347,13 @@ bool ChunkDemuxerStream::UpdateVideoConfig(const VideoDecoderConfig& config,
 
   if (!stream_) {
     DCHECK_EQ(state_, UNINITIALIZED);
-#if defined(STARBOARD)
-    stream_ =
-        std::make_unique<SourceBufferStream>(mime_type_, config, media_log);
-#else   // defined (STARBOARD)
+    // #if defined(STARBOARD)
+    //     stream_ =
+    //         std::make_unique<SourceBufferStream>(mime_type_, config,
+    //         media_log);
+    // #else   // defined (STARBOARD)
     stream_ = std::make_unique<SourceBufferStream>(config, media_log);
-#endif  // defined (STARBOARD)
+    // #endif  // defined (STARBOARD)
     return true;
   }
 
@@ -1169,23 +1170,35 @@ bool ChunkDemuxer::EvictCodedFrames(const std::string& id,
   return itr->second->EvictCodedFrames(currentMediaTime, newDataSize);
 }
 
-#if defined(STARBOARD)
+// #if defined(STARBOARD)
 
-base::TimeDelta ChunkDemuxer::GetWriteHead(const std::string& id) const {
-  base::AutoLock auto_lock(lock_);
-  DCHECK(IsValidId_Locked(id));
+// base::TimeDelta ChunkDemuxer::GetWriteHead(const std::string& id) const {
+//   base::AutoLock auto_lock(lock_);
+//   DCHECK(IsValidId_Locked(id));
 
-  auto iter = id_to_streams_map_.find(id);
-  if (iter == id_to_streams_map_.end() || iter->second.empty()) {
-    // Handled just in case.
-    SB_NOTREACHED();
-    return base::TimeDelta();
-  }
+//   auto iter = id_to_streams_map_.find(id);
+//   if (iter == id_to_streams_map_.end() || iter->second.empty()) {
+//     // Handled just in case.
+//     SB_NOTREACHED();
+//     return base::TimeDelta();
+//   }
 
-  return iter->second[0]->GetWriteHead();
-}
+//   return iter->second[0]->GetWriteHead();
+// }
 
-#endif  // defined(STARBOARD)
+// size_t ChunkDemuxerStream::GetStreamMemoryLimit() {
+//   base::AutoLock auto_lock(lock_);
+//   DCHECK(stream_);
+//   return stream_->memory_limit();
+// }
+
+// void ChunkDemuxerStream::SetStreamMemoryLimitOverride(size_t memory_limit) {
+//   base::AutoLock auto_lock(lock_);
+//   DCHECK(stream_);
+//   stream_->set_memory_limit_override(memory_limit);
+// }
+
+// #endif  // defined(STARBOARD)
 
 bool ChunkDemuxer::AppendToParseBuffer(const std::string& id,
                                        const uint8_t* data,
@@ -1781,15 +1794,16 @@ ChunkDemuxerStream* ChunkDemuxer::CreateDemuxerStream(
       return nullptr;
   }
 
-#if defined(STARBOARD)
-  auto iter = id_to_mime_map_.find(source_id);
-  DCHECK(iter != id_to_mime_map_.end());
-  std::unique_ptr<ChunkDemuxerStream> stream =
-      std::make_unique<ChunkDemuxerStream>(iter->second, type, media_track_id);
-#else   // defined(STARBOARD)
+  // #if defined(STARBOARD)
+  //   auto iter = id_to_mime_map_.find(source_id);
+  //   DCHECK(iter != id_to_mime_map_.end());
+  //   std::unique_ptr<ChunkDemuxerStream> stream =
+  //       std::make_unique<ChunkDemuxerStream>(iter->second, type,
+  //       media_track_id);
+  // #else   // defined(STARBOARD)
   std::unique_ptr<ChunkDemuxerStream> stream =
       std::make_unique<ChunkDemuxerStream>(type, media_track_id);
-#endif  // defined (STARBOARD)
+  // #endif  // defined (STARBOARD)
 
   DCHECK(track_id_to_demux_stream_map_.find(media_track_id) ==
          track_id_to_demux_stream_map_.end());

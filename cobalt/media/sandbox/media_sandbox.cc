@@ -33,7 +33,7 @@
 #include "cobalt/storage/storage_manager.h"
 #include "cobalt/system_window/system_window.h"
 #include "cobalt/trace_event/scoped_trace_to_file.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/geometry/size.h"
+#include "media/cobalt/ui/gfx/geometry/size.h"
 
 namespace cobalt {
 namespace media {
@@ -79,7 +79,7 @@ class MediaSandbox::Impl {
 
 MediaSandbox::Impl::Impl(int argc, char** argv,
                          const base::FilePath& trace_log_path) {
-  trace_to_file_.reset(new trace_event::ScopedTraceToFile(trace_log_path));
+  //  trace_to_file_.reset(new trace_event::ScopedTraceToFile(trace_log_path));
   // A one-per-process task scheduler is needed for usage of APIs in
   // base/post_task.h which will be used by some net APIs like
   // URLRequestContext;

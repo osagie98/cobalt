@@ -28,13 +28,13 @@
 #include "base/sequence_checker.h"
 #include "base/threading/thread.h"
 #include "cobalt/media/progressive/data_source_reader.h"
+#include "media/base/audio_decoder_config.h"
+#include "media/base/decoder_buffer.h"
+#include "media/base/demuxer.h"
+#include "media/base/pipeline_status.h"
+#include "media/base/ranges.h"
+#include "media/base/video_decoder_config.h"
 #include "starboard/extension/demuxer.h"
-#include "third_party/chromium/media/base/audio_decoder_config.h"
-#include "third_party/chromium/media/base/decoder_buffer.h"
-#include "third_party/chromium/media/base/demuxer.h"
-#include "third_party/chromium/media/base/pipeline_status.h"
-#include "third_party/chromium/media/base/ranges.h"
-#include "third_party/chromium/media/base/video_decoder_config.h"
 
 namespace cobalt {
 namespace media {
@@ -69,7 +69,7 @@ class DemuxerExtensionStream : public ::media::DemuxerStream {
   size_t GetTotalBufferSize() const;
 
   // DemuxerStream implementation:
-  void Read(int max_number_of_buffers_to_read, ReadCB read_cb) override;
+  void Read(uint32_t count, ReadCB read_cb) override;
   ::media::AudioDecoderConfig audio_decoder_config() override;
   ::media::VideoDecoderConfig video_decoder_config() override;
   Type type() const override;
@@ -165,6 +165,9 @@ class DemuxerExtensionWrapper : public ::media::Demuxer {
   // Demuxer implementation:
   std::vector<::media::DemuxerStream*> GetAllStreams() override;
   std::string GetDisplayName() const override;
+  ::media::DemuxerType GetDemuxerType() const override {
+    return ::media::DemuxerType::kProgressiveDemuxer;
+  }
   void Initialize(::media::DemuxerHost* host,
                   ::media::PipelineStatusCallback status_cb) override;
   void AbortPendingReads() override;
@@ -172,6 +175,7 @@ class DemuxerExtensionWrapper : public ::media::Demuxer {
   void CancelPendingSeek(base::TimeDelta seek_time) override;
   void Seek(base::TimeDelta time,
             ::media::PipelineStatusCallback status_cb) override;
+  bool IsSeekable() const override { return true; }
   void Stop() override;
   base::TimeDelta GetStartTime() const override;
   base::Time GetTimelineOffset() const override;
@@ -182,6 +186,8 @@ class DemuxerExtensionWrapper : public ::media::Demuxer {
   void OnSelectedVideoTrackChanged(
       const std::vector<::media::MediaTrack::Id>& track_ids,
       base::TimeDelta curr_time, TrackChangeCB change_completed_cb) override;
+
+  void SetPlaybackRate(double rate) override {}
 
   absl::optional<::media::container_names::MediaContainerName>
   GetContainerForMetrics() const override {

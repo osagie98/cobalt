@@ -41,13 +41,13 @@ class MEDIA_EXPORT ChunkDemuxerStream : public DemuxerStream {
 
   ChunkDemuxerStream() = delete;
 
-#if defined(STARBOARD)
-  ChunkDemuxerStream(const std::string& mime_type,
-                     Type type,
-                     MediaTrack::Id media_track_id);
-#else   // defined (STARBOARD)
+  // #if defined(STARBOARD)
+  //   ChunkDemuxerStream(const std::string& mime_type,
+  //                      Type type,
+  //                      MediaTrack::Id media_track_id);
+  // #else   // defined (STARBOARD)
   ChunkDemuxerStream(Type type, MediaTrack::Id media_track_id);
-#endif  // defined (STARBOARD)
+  // #endif  // defined (STARBOARD)
 
   ChunkDemuxerStream(const ChunkDemuxerStream&) = delete;
   ChunkDemuxerStream& operator=(const ChunkDemuxerStream&) = delete;
@@ -86,9 +86,9 @@ class MEDIA_EXPORT ChunkDemuxerStream : public DemuxerStream {
   // https://w3c.github.io/media-source/#sourcebuffer-coded-frame-eviction
   bool EvictCodedFrames(base::TimeDelta media_time, size_t newDataSize);
 
-#if defined(STARBOARD)
-  base::TimeDelta GetWriteHead() const;
-#endif  // defined(STARBOARD)
+  // #if defined(STARBOARD)
+  //   base::TimeDelta GetWriteHead() const;
+  // #endif  // defined(STARBOARD)
 
   void OnMemoryPressure(
       base::TimeDelta media_time,
@@ -141,9 +141,11 @@ class MEDIA_EXPORT ChunkDemuxerStream : public DemuxerStream {
   void UnmarkEndOfStream();
 
   // DemuxerStream methods.
-#if defined(STARBOARD)
-  std::string mime_type() const override { return mime_type_; }
-#endif  // defined (STARBOARD)
+  // #if defined(STARBOARD)
+  //   std::string mime_type() const override { return mime_type_; }
+  //   // size_t GetStreamMemoryLimit();
+  //   // void SetStreamMemoryLimitOverride(size_t memory_limit);
+  // #endif  // defined (STARBOARD)
 
   void Read(uint32_t count, ReadCB read_cb) override;
   Type type() const override;
@@ -429,9 +431,9 @@ class MEDIA_EXPORT ChunkDemuxer : public Demuxer {
                                       base::TimeDelta currentMediaTime,
                                       size_t newDataSize);
 
-#if defined(STARBOARD)
-  base::TimeDelta GetWriteHead(const std::string& id) const;
-#endif  // defined(STARBOARD)
+  // #if defined(STARBOARD)
+  //   base::TimeDelta GetWriteHead(const std::string& id) const;
+  // #endif  // defined(STARBOARD)
 
   void OnMemoryPressure(
       base::TimeDelta currentMediaTime,

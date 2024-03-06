@@ -33,7 +33,13 @@ class Size : public SizeBase<Size, int> {
     return checked_area;
   }
 
+#if defined(STARBOARD)
+  std::string ToString() const {
+    return base::StringPrintf("%dx%d", width(), height());
+  }
+#else
   std::string ToString() const;
+#endif  // defined(STARBOARD)
 };
 
 inline bool operator==(const Size& lhs, const Size& rhs) {

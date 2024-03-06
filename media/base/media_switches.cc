@@ -11,8 +11,8 @@
 #include "build/build_config.h"
 #include "build/chromecast_buildflags.h"
 #include "build/chromeos_buildflags.h"
-#include "components/system_media_controls/linux/buildflags/buildflags.h"
-#include "gpu/config/gpu_finch_features.h"
+// #include "components/system_media_controls/linux/buildflags/buildflags.h"
+// #include "gpu/config/gpu_finch_features.h"
 #include "media/media_buildflags.h"
 
 #if BUILDFLAG(IS_LINUX)
@@ -429,11 +429,11 @@ BASE_FEATURE(kCdmProcessSiteIsolation,
 BASE_FEATURE(kChromeWideEchoCancellation,
              "ChromeWideEchoCancellation",
 #if BUILDFLAG(IS_CHROMEOS_DEVICE)
-    base::FEATURE_DISABLED_BY_DEFAULT
+             base::FEATURE_DISABLED_BY_DEFAULT
 #else
-    base::FEATURE_ENABLED_BY_DEFAULT
+             base::FEATURE_ENABLED_BY_DEFAULT
 #endif
-             );
+);
 
 // When audio processing is done in the audio process, at the renderer side IPC
 // is set up to receive audio at the processing sample rate. This is a

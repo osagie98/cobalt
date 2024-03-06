@@ -35,7 +35,7 @@ namespace media {
 
 using AudioCodec = ::media::AudioCodec;
 using VideoCodec = ::media::VideoCodec;
-using PipelineStatus = ::media::PipelineStatusCodes;
+using PipelineStatus = ::media::PipelineStatus;
 using VideoDecoderType = ::media::VideoDecoderType;
 
 class MediaMetricsProvider {
@@ -56,7 +56,7 @@ class MediaMetricsProvider {
     ::media::AudioCodec audio_codec;
     ::media::VideoCodec video_codec;
     ::media::PipelineStatus last_pipeline_status =
-        ::media::PipelineStatusCodes::PIPELINE_OK;
+        ::media::PipelineStatus::Codes::PIPELINE_OK;
   };
 
   struct MediaInfo {
@@ -68,7 +68,7 @@ class MediaMetricsProvider {
  public:
   // based on mojom::MediaMetricsProvider
   void Initialize(bool is_mse);
-  void OnError(const ::media::PipelineStatusCodes status);
+  void OnError(const ::media::PipelineStatus status);
   void SetHasAudio(::media::AudioCodec audio_codec);
   void SetHasVideo(::media::VideoCodec video_codec);
   void SetHasPlayed();

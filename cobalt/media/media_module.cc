@@ -28,7 +28,7 @@
 #include "starboard/common/string.h"
 #include "starboard/media.h"
 #include "starboard/window.h"
-// #include "third_party/chromium/media/base/mime_util.h"
+// #include "media/base/mime_util.h"
 
 #include "media/base/mime_util.h"
 

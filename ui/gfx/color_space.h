@@ -279,7 +279,9 @@ class COLOR_SPACE_EXPORT ColorSpace {
       PRINT_ENUM_CASE(PrimaryID, APPLE_GENERIC_RGB)
       PRINT_ENUM_CASE(PrimaryID, WIDE_GAMUT_COLOR_SPIN)
       case PrimaryID::CUSTOM:
+#if !defined(STARBOARD)
         ss << skia::SkColorSpacePrimariesToString(GetPrimaries());
+#endif  // !defined (STARBOARD)
         break;
     }
     ss << ", transfer:";
@@ -321,13 +323,16 @@ class COLOR_SPACE_EXPORT ColorSpace {
         ss << " nits)";
         break;
       case TransferID::CUSTOM: {
+#if !defined(STARBOARD)
         skcms_TransferFunction fn;
         GetTransferFunction(&fn);
         ss << fn.c << "*x + " << fn.f << " if x < " << fn.d << " else (" << fn.a
            << "*x + " << fn.b << ")**" << fn.g << " + " << fn.e;
+#endif  // !defined (STARBOARD)
         break;
       }
       case TransferID::CUSTOM_HDR: {
+#if !defined(STARBOARD)
         skcms_TransferFunction fn;
         GetTransferFunction(&fn);
         if (fn.g == 1.0f && fn.a > 0.0f && fn.b == 0.0f && fn.c == 0.0f &&
@@ -338,13 +343,16 @@ class COLOR_SPACE_EXPORT ColorSpace {
         ss << fn.c << "*x + " << fn.f << " if |x| < " << fn.d
            << " else sign(x)*(" << fn.a << "*|x| + " << fn.b << ")**" << fn.g
            << " + " << fn.e;
+#endif  // !defined (STARBOARD)
         break;
       }
       case TransferID::PIECEWISE_HDR: {
+#if !defined(STARBOARD)
         skcms_TransferFunction fn;
         GetTransferFunction(&fn);
         ss << "sRGB to 1 at " << transfer_params_[0] << ", linear to "
            << transfer_params_[1] << " at 1";
+#endif  // !defined (STARBOARD)
         break;
       }
       case TransferID::SCRGB_LINEAR_80_NITS:

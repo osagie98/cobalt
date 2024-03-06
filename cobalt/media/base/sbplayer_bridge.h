@@ -30,13 +30,13 @@
 #include "cobalt/media/base/decoder_buffer_cache.h"
 #include "cobalt/media/base/sbplayer_interface.h"
 #include "cobalt/media/base/sbplayer_set_bounds_helper.h"
+#include "media/base/audio_decoder_config.h"
+#include "media/base/decoder_buffer.h"
+#include "media/base/demuxer_stream.h"
+#include "media/base/video_decoder_config.h"
+#include "media/cobalt/ui/gfx/geometry/rect.h"
 #include "starboard/media.h"
 #include "starboard/player.h"
-#include "third_party/chromium/media/base/audio_decoder_config.h"
-#include "third_party/chromium/media/base/decoder_buffer.h"
-#include "third_party/chromium/media/base/demuxer_stream.h"
-#include "third_party/chromium/media/base/video_decoder_config.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/geometry/rect.h"
 
 namespace cobalt {
 namespace media {

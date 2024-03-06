@@ -24,11 +24,11 @@
 #include "base/trace_event/trace_event.h"
 #include "cobalt/base/c_val.h"
 #include "cobalt/base/startup_timer.h"
+#include "media/base/bind_to_current_loop.h"
+#include "media/base/channel_layout.h"
 #include "starboard/common/media.h"
 #include "starboard/common/string.h"
 #include "starboard/configuration_constants.h"
-#include "third_party/chromium/media/base/bind_to_current_loop.h"
-#include "third_party/chromium/media/base/channel_layout.h"
 
 namespace cobalt {
 namespace media {
@@ -690,7 +690,7 @@ void SbPlayerPipeline::OnDemuxerError(PipelineStatus error) {
     return;
   }
 
-  if (error != ::media::PIPELINE_OK) {
+  if (error.code() != ::media::PipelineStatus::Codes::PIPELINE_OK) {
     CallErrorCB(error, "Demuxer error.");
   }
 }
@@ -805,12 +805,14 @@ void SbPlayerPipeline::CreatePlayer(SbDrmSystem drm_system) {
       video_stream_ ? video_stream_->video_decoder_config()
                     : invalid_video_config;
 
-  std::string audio_mime_type = audio_stream_ ? audio_stream_->mime_type() : "";
+  // std::string audio_mime_type = audio_stream_ ? audio_stream_->mime_type() :
+  // "";
+  std::string audio_mime_type;
   std::string video_mime_type;
   if (video_stream_) {
     playback_statistics_.UpdateVideoConfig(
         video_stream_->video_decoder_config());
-    video_mime_type = video_stream_->mime_type();
+    // video_mime_type = video_stream_->mime_type();
   }
 
   std::string error_message;
@@ -893,7 +895,7 @@ void SbPlayerPipeline::OnDemuxerInitialized(PipelineStatus status) {
     return;
   }
 
-  if (status != ::media::PIPELINE_OK) {
+  if (status.code() != ::media::PipelineStatus::Codes::PIPELINE_OK) {
     CallErrorCB(status, "Demuxer initialization error.");
     return;
   }
@@ -966,7 +968,8 @@ void SbPlayerPipeline::OnDemuxerInitialized(PipelineStatus status) {
 void SbPlayerPipeline::OnDemuxerSeeked(PipelineStatus status) {
   DCHECK(task_runner_->BelongsToCurrentThread());
 
-  if (status == ::media::PIPELINE_OK && player_bridge_) {
+  if (status.code() == ::media::PipelineStatus::Codes::PIPELINE_OK &&
+      player_bridge_) {
     player_bridge_->Seek(seek_time_);
   }
 }
@@ -1207,7 +1210,8 @@ void SbPlayerPipeline::OnPlayerError(SbPlayerError error,
       CallErrorCB(::media::PIPELINE_ERROR_DECODE, message);
       break;
     case kSbPlayerErrorCapabilityChanged:
-      CallErrorCB(::media::PLAYBACK_CAPABILITY_CHANGED, message);
+      // TODO: Include capability change error handling.
+      CallErrorCB(::media::PIPELINE_ERROR_DECODE, message);
       break;
     case kSbPlayerErrorMax:
       NOTREACHED();
@@ -1232,7 +1236,9 @@ void SbPlayerPipeline::UpdateDecoderConfig(DemuxerStream* stream) {
   if (stream->type() == DemuxerStream::AUDIO) {
     const AudioDecoderConfig& decoder_config = stream->audio_decoder_config();
     media_metrics_provider_->SetHasAudio(decoder_config.codec());
-    player_bridge_->UpdateAudioConfig(decoder_config, stream->mime_type());
+    // player_bridge_->UpdateAudioConfig(decoder_config, stream->mime_type());
+    player_bridge_->UpdateAudioConfig(decoder_config, "");
+
   } else {
     DCHECK_EQ(stream->type(), DemuxerStream::VIDEO);
     const VideoDecoderConfig& decoder_config = stream->video_decoder_config();
@@ -1242,7 +1248,8 @@ void SbPlayerPipeline::UpdateDecoderConfig(DemuxerStream* stream) {
         (decoder_config.natural_size().width() != natural_size_.width() ||
          decoder_config.natural_size().height() != natural_size_.height());
     natural_size_ = decoder_config.natural_size();
-    player_bridge_->UpdateVideoConfig(decoder_config, stream->mime_type());
+    // player_bridge_->UpdateVideoConfig(decoder_config, stream->mime_type());
+    player_bridge_->UpdateVideoConfig(decoder_config, "");
     if (natural_size_changed) {
       content_size_change_cb_.Run();
     }
@@ -1253,7 +1260,7 @@ void SbPlayerPipeline::UpdateDecoderConfig(DemuxerStream* stream) {
 
 void SbPlayerPipeline::CallSeekCB(PipelineStatus status,
                                   const std::string& error_message) {
-  if (status == ::media::PIPELINE_OK) {
+  if (status.code() == ::media::PipelineStatus::Codes::PIPELINE_OK) {
     DCHECK(error_message.empty());
   }
 

@@ -19,19 +19,19 @@
 #include <string>
 #include <utility>
 
+#include "media/base/audio_codecs.h"
+#include "media/base/bind_to_current_loop.h"
+#include "media/base/encryption_scheme.h"
+#include "media/base/sample_format.h"
+#include "media/base/starboard_utils.h"
+#include "media/base/video_types.h"
+#include "media/cobalt/ui/gfx/color_space.h"
+#include "media/cobalt/ui/gfx/geometry/rect.h"
+#include "media/cobalt/ui/gfx/geometry/size.h"
+#include "media/filters/h264_to_annex_b_bitstream_converter.h"
+#include "media/formats/mp4/box_definitions.h"
 #include "starboard/extension/demuxer.h"
 #include "starboard/system.h"
-#include "third_party/chromium/media/base/audio_codecs.h"
-#include "third_party/chromium/media/base/bind_to_current_loop.h"
-#include "third_party/chromium/media/base/encryption_scheme.h"
-#include "third_party/chromium/media/base/sample_format.h"
-#include "third_party/chromium/media/base/starboard_utils.h"
-#include "third_party/chromium/media/base/video_types.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/color_space.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/geometry/rect.h"
-#include "third_party/chromium/media/cobalt/ui/gfx/geometry/size.h"
-#include "third_party/chromium/media/filters/h264_to_annex_b_bitstream_converter.h"
-#include "third_party/chromium/media/formats/mp4/box_definitions.h"
 
 namespace cobalt {
 namespace media {
@@ -187,8 +187,7 @@ DemuxerExtensionStream::DemuxerExtensionStream(
       << "Audio config is not valid!";
 }
 
-void DemuxerExtensionStream::Read(int max_number_of_buffers_to_read,
-                                  ReadCB read_cb) {
+void DemuxerExtensionStream::Read(uint32_t count, ReadCB read_cb) {
   DCHECK(!read_cb.is_null());
   base::AutoLock auto_lock(lock_);
   if (stopped_) {
@@ -541,7 +540,9 @@ void DemuxerExtensionWrapper::OnInitializeDone(
   } else {
     LOG(ERROR) << "Initialization failed with status " << status;
   }
-  std::move(status_cb).Run(static_cast<PipelineStatus>(status));
+  int status_as_int = static_cast<int>(status);
+  std::move(status_cb).Run(
+      static_cast<::media::PipelineStatusCodes>(status_as_int));
 }
 
 void DemuxerExtensionWrapper::AbortPendingReads() {}

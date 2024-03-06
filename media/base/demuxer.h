@@ -34,6 +34,9 @@ enum class DemuxerType {
   kFrameInjectingDemuxer,
   kStreamProviderDemuxer,
   kManifestDemuxer,
+#if defined(STARBOARD)
+  kProgressiveDemuxer,
+#endif
 };
 
 class MEDIA_EXPORT DemuxerHost {
@@ -86,6 +89,9 @@ class MEDIA_EXPORT Demuxer : public MediaResource {
     kChunkDemuxer,
     kFFmpegDemuxer,
     kMediaUrlDemuxer,
+#if defined(STARBOARD)
+    kProgressiveDemuxer,
+#endif
   };
 
   Demuxer();

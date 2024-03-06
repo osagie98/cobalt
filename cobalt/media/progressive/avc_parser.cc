@@ -22,16 +22,16 @@
 #include "cobalt/media/base/endian_util.h"
 #include "cobalt/media/progressive/avc_access_unit.h"
 #include "cobalt/media/progressive/rbsp_stream.h"
+#include "media/base/audio_codecs.h"
+#include "media/base/decoder_buffer.h"
+#include "media/base/encryption_scheme.h"
+#include "media/base/media_util.h"
+#include "media/base/video_codecs.h"
+#include "media/base/video_color_space.h"
+#include "media/base/video_transformation.h"
+#include "media/base/video_types.h"
+#include "media/formats/mp4/aac.h"
 #include "starboard/memory.h"
-#include "third_party/chromium/media/base/audio_codecs.h"
-#include "third_party/chromium/media/base/decoder_buffer.h"
-#include "third_party/chromium/media/base/encryption_scheme.h"
-#include "third_party/chromium/media/base/media_util.h"
-#include "third_party/chromium/media/base/video_codecs.h"
-#include "third_party/chromium/media/base/video_color_space.h"
-#include "third_party/chromium/media/base/video_transformation.h"
-#include "third_party/chromium/media/base/video_types.h"
-#include "third_party/chromium/media/formats/mp4/aac.h"
 
 namespace cobalt {
 namespace media {
@@ -459,8 +459,9 @@ void AVCParser::ParseAudioSpecificConfig(uint8 b0, uint8 b1) {
   aac_config[1] = b1;
   audio_prepend_.clear();
 
+  int adts_header_size;
   if (!aac.Parse(aac_config, media_log_) ||
-      !aac.ConvertEsdsToADTS(&audio_prepend_)) {
+      !aac.ConvertEsdsToADTS(&audio_prepend_, &adts_header_size)) {
     DLOG(WARNING) << "Error in parsing AudioSpecificConfig.";
     return;
   }

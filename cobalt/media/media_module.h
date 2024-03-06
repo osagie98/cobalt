@@ -36,7 +36,7 @@
 #include "cobalt/system_window/system_window.h"
 #include "starboard/common/mutex.h"
 #include "starboard/player.h"
-// #include "third_party/chromium/media/base/media_log.h"
+// #include "media/base/media_log.h"
 
 #include "media/base/media_log.h"
 

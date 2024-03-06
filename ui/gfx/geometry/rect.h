@@ -47,7 +47,14 @@ class Rect : public RectBase<Rect, Point, Size, Insets, Vector2d, int> {
 
   ~Rect() {}
 
+#if defined(STARBOARD)
+  std::string ToString() const {
+    return base::StringPrintf("%s %s", origin().ToString().c_str(),
+                              size().ToString().c_str());
+  }
+#else
   std::string ToString() const;
+#endif  // defined(STARBOARD)
 };
 
 inline bool operator==(const Rect& lhs, const Rect& rhs) {
